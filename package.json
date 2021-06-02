@@ -1,0 +1,23 @@
+{
+  "name": "shisho",
+  "version": "0.4.1",
+  "description": "The SHISHO Knowledge Management system",
+  "main": "shisho.min.js",
+  "scripts": {
+    "test": "utilities/test/test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MikelSalazar/SHISHO.git"
+  },
+  "keywords": [
+    "KMS",
+    "Ontology"
+  ],
+  "author": "Mikel Salazar",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/MikelSalazar/SHISHO/issues"
+  },
+  "homepage": "https://github.com/MikelSalazar/SHISHO#readme"
+}
