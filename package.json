@@ -1,15 +1,30 @@
 {
   "name": "shisho",
   "version": "0.4.1",
-  "description": "The SHISHO Knowledge Management system",
-  "main": "shisho.min.js",
+  "description": "A Web-based Knowledge Management System",
+  "main": "builds/shisho.min.js",
   "scripts": {
-    "test": "utilities/test/test"
+    "run": "npm run dev",
+    "test": "electron utilities/test/test",
+    "dev": "node utilities/build/build"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MikelSalazar/SHISHO.git"
   },
+  "directories": {
+    "bin": "builds",
+    "lib": "builds",
+    "example": "examples",
+    "test": "tests",
+    "doc": "docs"
+  },
+  "files": [
+    "README.md",
+    "LICENSE",
+    "package.json",
+    "builds"
+  ],
   "keywords": [
     "KMS",
     "Ontology"
@@ -19,5 +34,9 @@
   "bugs": {
     "url": "https://github.com/MikelSalazar/SHISHO/issues"
   },
-  "homepage": "https://github.com/MikelSalazar/SHISHO#readme"
+  "homepage": "https://github.com/MikelSalazar/SHISHO#readme",
+  "devDependencies": {
+    "electron": "^13.0.1",
+    "terser": "^5.7.0"
+  }
 }

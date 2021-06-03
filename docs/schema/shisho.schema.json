@@ -1,0 +1,140 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"$id": "shisho.schema.json",
+	"$comment": "The JSON Schema of SHISHO system documents.",
+	"$ref": "#/definitions/root",
+	"definitions": {
+
+		"root": {
+			"properties": {
+				"SHISHO": {
+					"$comment": "The SHISHO system version",
+					"type": "string",
+					"default": "0.4"
+				},
+				"name": { 
+					"$comment": "The name/title of the SHISHO document",
+					"type": "string"
+				},
+				"description": { 
+					"$comment": "The description of the SHISHO document",
+					"type": "string"
+				},
+				"author": { 
+					"$comment": "The author(s) of the SHISHO document",
+					"type": "string"
+				},
+				"onthology": {
+					"$comment": "The onthology data",
+					"$ref": "#/definitions/onthology"					
+				},
+				"styles": {
+					"$comment": "The onthology data",
+					"$ref": "#/definitions/style"
+				}
+			},
+			"required": ["SHISHO", "name"]
+		},
+
+		"onthology": {
+			"$comment": "The onthology data",
+			"properties": {
+				"name": { 
+					"$comment": "The name of the ontology",
+					"type": "string"
+				},
+				"description": { 
+					"$comment": "The description of the ontology",
+					"type": "string"
+				},
+				"classes": {
+					"type": "array",
+					"allOf": [{"$ref": "#/definitions/class"}]
+				},
+				"relations": {
+					"type": "array",
+					"allOf": [{"$ref": "#/definitions/relation"}]
+				}
+			}
+		},
+
+		"class": {
+			"$comment": "The class data",
+			"properties": {
+				"name": { 
+					"$comment": "The name of the class",
+					"type": "string"
+				},
+				"description": { 
+					"$comment": "The description of the class",
+					"type": "string"
+				},
+				"properties": {
+					"type": "array",
+					"allOf": [{"$ref": "#/definitions/property"}]
+				},
+				"positions": {
+					"type": "array",
+					"allOf": [{"$ref": "#/definitions/vector"}]
+				}
+			}
+		},
+
+		
+		"property": {
+			"$comment": "The property data",
+			"properties": {
+				"name": { 
+					"$comment": "The name of the property",
+					"type": "string"
+				},
+				"description": { 
+					"$comment": "The description of the property",
+					"type": "string"
+				}
+			}
+		},
+
+		"relation": {
+			"$comment": "The relation data",
+			"properties": {
+				"name": { 
+					"$comment": "The name of the relation",
+					"type": "string"
+				},
+				"description": { 
+					"$comment": "The description of the relation",
+					"type": "string"
+				},
+				"origin": { 
+					"$comment": "The origin class of the relation",
+					"type": "string"
+				},
+				"target": { 
+					"$comment": "The target class of the relation",
+					"type": "string"
+				}
+			}
+		},
+
+
+		"style": {
+			"$comment": "The style data",
+			"properties": {}
+		},
+
+		"vector" : {
+			"$comment": "Defines a bi-dimensional vector",
+			"properties": {
+				"x": { 
+					"$comment": "The value of the vector in the X axis.",
+					"type": "number"
+				},
+				"y": {
+					"$comment": "The value of the vector in the X axis.",
+					"type": "number"
+				}
+			}
+		}
+	}
+}

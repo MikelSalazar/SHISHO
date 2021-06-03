@@ -1,0 +1,6 @@
+{
+	"$schema": "../../../docs/schema/shisho.schema.json",
+	"SHISHO": "0.4",
+	"name": "Test"
+	
+}
