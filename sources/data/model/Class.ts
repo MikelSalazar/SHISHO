@@ -18,6 +18,7 @@ export class Class extends Node {
 
 	/** The positions of the class. */
 	positions: Vector[] = [];
+	
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 

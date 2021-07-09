@@ -5,12 +5,18 @@ import { Dialog } from "./view/widgets/Dialog";
 /** Defines the main class of the SHISHO Knowledge Management System. */
 export class SHISHO {
 
+	// --------------------------------------------------- PUBLIC STATIC FIELDS
+
+	/** The SHISHO app instances. */
+	public static instances: SHISHO[] = [];
+	
+	/** The SHISHO app resources. */
+	public static resources: Record<string, any> = {};
+	
+
 	// --------------------------------------------------------- PRIVATE FIELDS
 
-	/** The list of SHISHO App instances. */
-	private static _instances: SHISHO[] = [];
-
-	/** The app instance number. */
+	/** The SHISHO app instance number. */
 	private _instanceNumber: number;
 
 	/** The app instance string. */
@@ -43,8 +49,8 @@ export class SHISHO {
 	/** The SHISHO app version number. */
 	static get AppVersion(): string { return "0.4.1"; }
 
-	/** The SHISHO app instances. */
-	static get instances(): SHISHO[] { return this._instances; }
+	/** The SHISHO app instance number. */
+	static get _instanceNumber(): number[] { return this._instanceNumber; }
 
 	/** The viewports of the app. */
 	get viewports(): Viewport[] { return this._viewports; }
@@ -94,7 +100,7 @@ export class SHISHO {
 	
 	/** Loads the SHISHO data.
 	 * @param data The data to load. */
-	 deserialize(data?: any) {
+	deserialize(data?: any) {
 
 		// If there is no data, try to get it from other sources
 		if (!data) {

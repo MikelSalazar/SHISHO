@@ -1,5 +1,5 @@
 import { Vector } from "../../data/model/Vector.js";
-import { Shape } from "../Shape.js";
+import { Element } from "../Element.js";
 import { Style } from "../../data/model/Style.js";
 import { createElement } from "../Viewport.js";
 import { Widget } from "../Widget.js";
@@ -9,8 +9,8 @@ export class Graph extends Widget {
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
-	/** The shapes of the layer. */
-	// get shapes(): Shape[] { return this._shapes; }
+	/** The elements of the layer. */
+	// get elements(): Element[] { return this._elements; }
 
 
 	// ------------------------------------------------------------ CONSTRUCTOR
@@ -23,7 +23,7 @@ export class Graph extends Widget {
 		// Call the base class constructor
 		super(name, parent, createElement("canvas", parent.element, parent.name + "Canvas"));
 
-		this._shapes = [];
+		this._elements = [];
 
 		// Create the canvas for the layer
 		this._canvas = this._element;
@@ -62,7 +62,7 @@ export class Graph extends Widget {
 		ctx.textAlign = 'center';
 		ctx.textBaseline = "middle";
 
-		this._shapes = [];
+		this._elements = [];
 
 		for (let relationName in o.relations) {
 			let r = o.relations[relationName];
@@ -90,10 +90,10 @@ export class Graph extends Widget {
 		for (let className in o.classes) {
 			let c = o.classes[className];
 
-			let shape = new Shape(c.name, c.positions[0], [style], c.name);
-			this._shapes.push(shape);
+			let element = new Element(c.name, c.positions[0], [style], c.name);
+			this._elements.push(element);
 
-			shape.draw(ctx);
+			element.draw(ctx);
 		}
 
 

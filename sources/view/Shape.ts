@@ -1,99 +1,111 @@
-import { Vector } from "../data/model/Vector";
-import { Layer } from "./Layer";
-import { Style } from "../data/model/Style";
-
-/** Defines a visual shape. */
+/** Defines a visual Shape. */
 export class Shape {
 
 	// --------------------------------------------------------- PRIVATE FIELDS
 
-	/** The name of the shape. */
-	protected _name: string;
+	/** The width of the shape. */
+	private _width: number;
 
-	/** The position of the shape. */
-	protected _position: Vector;
+	/** The height of the shape. */
+	private _height: number;
 
-	/** The styles of the shape. */
-	protected _styles: Style [];
+	/** The SVG path of the shape. */
+	private _path: Path2D;
 
-	/** The text of the shape. */
-	protected _text: string;
+	/** The subshapes of the shape. */
+	private _children: Shape[];
 
-	/** The visibility of the shape. */
-	protected _visibility: number = 1;
+	/** The color of the shape. */
+	private _color: string;
+
+	/** The color of the shape border. */
+	private _borderColor: string;
+
+	/** The width of the shape border. */
+	private _borderWidth: string;
 
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
-	/** The name of the shape. */
-	get name(): string { return this._name; }
-
-	/** The position of the shape. */
-	get position(): Vector { return this._position; }
-
-	/** The Layer instance the shape belongs to. */
-	get styles(): Style [] { return this._styles; }
-
-	/** The text of the shape. */
-	get text(): string { return this._text; }
-
-	/** The visibility of the shape. */
-	get visibility(): number { return this._visibility; }
+	/** The width of the shape. */
+	get width(): number { return this._width; }
 	
+	/** The height of the shape. */
+	get height(): number { return this._height; }
+	
+	/** The SVG path of the border. */
+	get path(): Path2D { return this._path; }
+
+	/** The color of the shape. */
+	get color(): string { return this._color; }
+
+	/** The color of the border. */
+	get borderColor(): string { return this._borderColor; }
+
+	/** The width of the border. */
+	get borderWidth(): string { return this._borderWidth; }
+
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
-	/** Initializes a new instance of the Shape class.
-	 * @param name The name of the shape.
-	 * @param layer The Layer instance the shape belongs to.
-	 * @param styles The styles of the shape.
-	 * @param text The text of the shape.
-	 * @param icon The icon of the shape. */
-	constructor (name:string, position: Vector, styles: Style[] = null, 
-		text: string = null, icon: string = null){
-
-		this._name = name; 
-		this._position = position || new Vector();
-		this._styles = styles || [];
-		this._text = text; 
+	/** Initializes a new Shape instance.
+	 * @param data The initialization data. */
+	constructor(data: any = {}) {
+		this._width = data.width || 0;
+		this._height = data.height || 0;
+		this._path = new Path2D(data.path); 
+		this._color = data.color;
+		this._borderColor = data.borderColor;
+		this._borderWidth = data.borderWidth;
+		this._children = [];
+		if (data.children)
+			data.children.forEach(s => { this._children.push(s)});
 	}
 
-	
+
 	// --------------------------------------------------------- PUBLIC METHODS
+	/** Draws the shape.
+	 * @param ctx The 2D context where to draw the shape. */
+	draw(ctx: CanvasRenderingContext2D, position = null, size = null) {
 
-	/** Draws the visual shape. */
-	draw(ctx: CanvasRenderingContext2D) {
+		// Save the current state
+		ctx.save();
 
-		let s = this._styles[0];
-		let p = this._position;
+		// If there is a size, calculate the scale
+		if (size) {
+			let maxDimension = (this._width > this._height) ?
+				this._width : this._height, scale = size / maxDimension;
+			// Translate the relative position
+			if (this._width && this._height) ctx.translate(
+				(-this.width * scale)/2, (-this._height * scale)/2);
 
-		ctx.beginPath();
-		switch(s.shape) {
-			case "circle":
-				if(s.radius == undefined) throw Error("No radius defined");
-				let r = parseFloat(s.radius);
-				ctx.arc(p.x, p.y, r, 0, 2* Math.PI);
-				break;
-			case "rectangle":
-				break;
-			default: throw Error("Invalid Shape Type"); break;
+			// Scale the object
+			ctx.scale(scale, scale);
+
+			// Position the the shape
+			if (position) ctx.translate(position.x / scale, position.y / scale);
+		}
+		else if (position) ctx.translate(position.x, position.y);
+		
+
+		// Draw the path
+		if (this._path) {
+			
+			// Draw the path
+			ctx.fillStyle = this._color; 
+			ctx.fill(this._path);
+
+			// Draw the outline
+			if (this._borderColor && this._borderWidth) { 
+				ctx.lineWidth = parseFloat(this._borderWidth)
+				ctx.strokeStyle = this._borderColor; ctx.stroke(); 
+			}
 		}
 
-		if (s.color) { ctx.fillStyle = s.color; ctx.fill(); }
-		if (s.borderColor && s.borderWidth) { 
-			ctx.lineWidth = parseFloat(s.borderWidth)
-			ctx.strokeStyle = s.borderColor; ctx.stroke(); 
-		}
-		if (s.textColor && s.textFont) { 
-			ctx.textAlign = "center"; ctx.textBaseline = "middle";
-			ctx.fillStyle = s.textColor; ctx.font = s.textSize + " " + s.textFont;
-			ctx.fillText(this._text,p.x,p.y);
-		}
-	
-	}
+		// Draw the subshapes
+		this._children.forEach(child => { child.draw(ctx); });
 
-	/** Finds if a point is inside the Shape */
-	isInside(point: Vector): boolean {
-		return false;
+		// Restor the previous state
+		ctx.restore();
 	}
 }

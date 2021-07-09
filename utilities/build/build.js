@@ -5,6 +5,7 @@
 // Require the necessary Nodejs packages
 const path = require("path"), 			// File Path handling
 	fs = require("fs"),					// File System access
+	parser = require('xml-js'),		// XML Data parser
 	exec = require('child_process');	// External command execution
 
 //------------------------------------------------------------ GLOBAL FUNCTIONS
@@ -44,14 +45,18 @@ function cleanFolder(folderPath, removeFolder = false) {
 
 
 /** Recursively finds the files inside a folder
- * @param folderPath The path to the folder. */
-function findFilesInFolder(folderPath) {
-	let filesInFolder = fs.readdirSync(folderPath);
-	for (const fileInFolder of filesInFolder) {
-		let filePath = path.join(folderPath, fileInFolder);
-		if(fs.statSync(filePath).isDirectory()) findFilesInFolder(filePath);
-		else filePaths.push(relativePath(sourcesFolderPath, filePath));
+ * @param folderPath The path to the folder.
+ * @param originalPath The relative path for the file folder. */
+function findFilesInFolder(folderPath, originalPath = null) {
+	let pathsInFolder = fs.readdirSync(folderPath), files = [];
+	if (!originalPath) originalPath = folderPath;
+	for (let pathInFolder of pathsInFolder) {
+		pathInFolder = path.join(folderPath, pathInFolder);
+		if(fs.statSync(pathInFolder).isDirectory()) 
+			files.push(... findFilesInFolder(pathInFolder, originalPath));
+		else files.push(relativePath(sourcesFolderPath, pathInFolder));
 	}
+	return files;
 }
 
 
@@ -62,11 +67,12 @@ let mainFileName = "SHISHO";
 let outputFileName = "shisho";
 let rootFolderPath = path.resolve(__dirname, '..\\..\\').replace(/\\/g,'/')+'/';
 let sourcesFolderPath = rootFolderPath + "sources/";
+let resourcesFolderPath = rootFolderPath + "resources/";
 let outputFolderPath = rootFolderPath + "builds/";
 let temporalFolderPath = outputFolderPath + "temporal/";
 let modulesFolderPath = outputFolderPath + "modules/";
 let outputFilePath = outputFolderPath + outputFileName;
-let filePaths = [];
+let sourceFiles = [], resourcefiles = [];
 
 //----------------------------------------------------------------- ENTRY POINT
 
@@ -77,15 +83,19 @@ console.log("Building at: " + rootFolderPath);
 console.log('Cleaning the output folder...');
 cleanFolder(outputFolderPath, false);
 
-// Create a temporal copy of the files and prepare them for transpilation
+// Identify the source files
 console.log('Identifying source files...');
-findFilesInFolder(sourcesFolderPath);
+sourceFiles = findFilesInFolder(sourcesFolderPath);
+
+// Identify the resource files
+console.log('Identifying resource files...');
+resourcefiles = findFilesInFolder(resourcesFolderPath);
 
 // Create a temporal copy of the files and prepare them for transpilation
 console.log('Preprocessing source files...');
-let codebase = {}, fileIndex, fileCount = filePaths.length;
+let codebase = {}, fileIndex, fileCount = sourceFiles.length;
 for (fileIndex = 0; fileIndex < fileCount; fileIndex++) {
-	let filePath = filePaths[fileIndex];
+	let filePath = sourceFiles[fileIndex];
 	let tsFilePath = sourcesFolderPath + filePath;
 	let temporalFilePath = temporalFolderPath + filePath;
 	let data = fs.readFileSync(tsFilePath, 'utf8');
@@ -119,12 +129,12 @@ function checkClassOrder(className) {
 for(let className in codebase) checkClassOrder(className);
 
 // If there is any remaining file path, add it to the end 
-for(let filePath of filePaths) 
+for(let filePath of sourceFiles) 
 	if(!orderedFilePaths.includes(filePath)) 
 		orderedFilePaths.push(filePath);
 
 // Replace the original array with the ordered version
-filePaths = orderedFilePaths;
+sourceFiles = orderedFilePaths;
 
 // Transpile the TypeScript code to Javascript
 // https://www.typescriptlang.org/docs/handbook/compiler-options.html
@@ -134,7 +144,7 @@ let command = 'tsc' +
 	' --moduleResolution node' +
 	' --rootDir "."' +
 	' --outDir "' + path.relative(temporalFolderPath, modulesFolderPath) + '"' +
-	' "' + filePaths.join('" "') + '"';
+	' "' + sourceFiles.join('" "') + '"';
 // console.log(command);
 // try { 
 	exec.execSync(command, { cwd: temporalFolderPath, stdio: 'inherit'});
@@ -148,7 +158,7 @@ cleanFolder(temporalFolderPath, true);
 console.log('Postprocessing output files...');
 let combinedLines = [];
 for (fileIndex = 0; fileIndex < fileCount; fileIndex++) {
-	let filePath = filePaths[fileIndex];
+	let filePath = sourceFiles[fileIndex];
 	console.log("Processing: " + filePath);
 	let moduleFilePath = modulesFolderPath + filePath.replace('.ts','.js');
 	let data = fs.readFileSync(moduleFilePath, 'utf8');
@@ -200,6 +210,79 @@ for (lineIndex = 0; lineIndex < lineCount; lineIndex++) {
 	if (l.startsWith('import ')) combinedLines[lineIndex] = "";
 }
 
+// Add the resources to the main file
+let resourceData = "// --------------------------------------------------" +
+	" RESOURCE DATA \n" + mainFileName + ".resources = {\n"  ; 
+fileCount = resourcefiles.length;
+for (fileIndex = 0; fileIndex < fileCount; fileIndex++) {
+	if (fileIndex > 0) resourceData += ',\n';
+	let resourceFile = resourcefiles[fileIndex];
+	let fileName = path.parse(resourceFile).name,
+		fileExt = path.extname(resourceFile),
+		fileData = fs.readFileSync(resourcesFolderPath + resourceFile, 'utf8');
+	switch (fileExt) {
+		case '.svg': // SVG files
+			// Get the shape data
+			// let widthStart = fileData.indexOf('width="') + 7,
+			// 	widthEnd = fileData.indexOf('"', widthStart),
+			// 	width = fileData.substring(widthStart, widthEnd),
+			// 	heightStart = fileData.indexOf('height="') + 8,
+			// 	heightEnd = fileData.indexOf('"', heightStart),
+			// 	height = fileData.substring(heightStart, heightEnd),
+			// 	paths = [], pathStart = fileData.indexOf(" d=\"") + 4, pathEnd;
+			// while (pathStart > 3) {
+			// 	pathEnd = fileData.indexOf('"', pathStart);
+			// 	paths.push(fileData.substring(pathStart, pathEnd));
+			// 	pathStart = fileData.indexOf(" d=\"", pathEnd) + 4;
+			// }
+
+			// Get the SVG root
+			let svg = parser.xml2js(fileData).elements[0], paths = []
+			let width = parseInt(svg.attributes["width"]);
+				height = parseInt(svg.attributes["height"]);
+			
+			// Parse the elements
+			function parseSVGElement (element) {
+				element.elements.forEach(child => {
+					if(child.name == "path") {
+						let path = {};
+						path.name = child.attributes["id"];
+						path.fill = child.attributes["fill"];
+						path.d = child.attributes["d"];
+						paths.push(path);
+					}	
+					if(child.name == "g") parseSVGElement(child);
+				});
+			}
+			parseSVGElement(svg);
+
+
+			let pathIndex, pathCount = paths.length, shapeData = 
+				"new Shape({ width: " + width + ", height: " + height + ", " ;
+			if (pathCount > 1) {
+				shapeData += 'children: [';
+				for (pathIndex = 0; pathIndex < pathCount; pathIndex++) {
+					let path = paths[pathIndex];
+					if (pathIndex > 0) shapeData += ', ';
+					shapeData += '\n\t\tnew Shape({' +
+						((path.id)? 'name: "' + path.name + '", ' : '' ) +
+						((path.fill)? 'color: "' + path.fill + '", ' : '' ) +
+						((path.d)? 'path: "' + path.d + '"': '') + '})';
+				}
+				
+				shapeData += '\n\t]';
+			}
+			else shapeData += 'path: "' + paths[0].d + '"';
+			resourceData += "\t\"" + fileName + '": ' + shapeData + "})";
+
+			break;
+	}
+	
+}
+resourceData += '\n}';
+fs.appendFileSync(modulesFolderPath + mainFileName + '.js', resourceData, 'utf8');
+combinedLines.push(resourceData);
+
 // Recombine the data and save the files as a module
 let combinedData = combinedLines.join("\n");
 fs.writeFileSync(outputFilePath+'.module.js', combinedData, 'utf8');
@@ -211,6 +294,7 @@ for (lineIndex = 0; lineIndex < lineCount; lineIndex++) {
 		combinedLines[lineIndex] = line.replace("export ","");
 	if (l.startsWith('export default')) combinedLines[lineIndex] = "";
 }
+
 
 
 // Recombine the data and save the files as a simple ES6 file

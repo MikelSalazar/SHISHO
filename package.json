@@ -38,5 +38,8 @@
   "devDependencies": {
     "electron": "^13.0.1",
     "terser": "^5.7.0"
+  },
+  "dependencies": {
+    "xml-js": "^1.6.11"
   }
 }
