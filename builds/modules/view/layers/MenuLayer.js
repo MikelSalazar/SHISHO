@@ -31,10 +31,6 @@ export class MenuLayer extends Layer {
 		this._shapes.push(new Shape("b", new Vector({ x: 0, y: 0 }), [style]));
 		this._shapes.push(new Shape("c", new Vector({ x: 0, y: 0 }), [style]));
 		this._shapes.push(new Shape("d", new Vector({ x: 0, y: 0 }), [style]));
-
-		this._canvas.addEventListener('pointerdown ', this.handlePointer.bind(this));
-		this._canvas.addEventListener('pointermove', this.handlePointer.bind(this));
-		this._canvas.addEventListener('pointerup', this.handlePointer.bind(this));
 	}
 
 
@@ -78,18 +74,5 @@ export class MenuLayer extends Layer {
 
 		// ctx.fillStyle = 'red';
 		// ctx.fillRect(50,50,w/2,h/2);
-	}
-
-	handlePointer(event) {
-
-		let cursor = new Vector({ x: event.clientX, y: event.clientY });
-		// Travel the array of shapes in reverse
-		let shapeIndex, shapeCount = this._shapes.length;
-		for (shapeIndex = shapeCount - 1; shapeIndex >= 0; shapeIndex--) {
-			let shape = this._shapes[shapeIndex];
-			if (shape.isInside(cursor)) {
-
-			}
-		}
 	}
 }
