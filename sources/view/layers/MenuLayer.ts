@@ -1,6 +1,6 @@
 import { Vector } from "../../data/model/Vector";
 import { Layer } from "../Layer";
-import { Shape } from "../Shape";
+import { Element } from "../Element";
 import { Style } from "../../data/model/Style";
 import { Viewport } from "../Viewport";
 
@@ -16,8 +16,8 @@ export class MenuLayer extends Layer {
 	/** The context of the canvas element. */
 	private _context: CanvasRenderingContext2D;
 
-	/** The shapes of the layer. */
-	protected _shapes : Shape[] = [];
+	/** The elements of the layer. */
+	protected _elements : Element[] = [];
 
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
@@ -25,8 +25,8 @@ export class MenuLayer extends Layer {
 	/** The canvas element. */
 	get canvas(): HTMLCanvasElement { return this._canvas; }
 
-	/** The shapes of the layer. */
-	get shapes(): Shape[] { return this._shapes; }
+	/** The elements of the layer. */
+	get elements(): Element[] { return this._elements; }
 
 
 	// ------------------------------------------------------------ CONSTRUCTOR
@@ -44,11 +44,15 @@ export class MenuLayer extends Layer {
 		this._context = this._canvas.getContext('2d');
 
 		// Create 
-		let style = new Style({name: "test", shape:"circle", color:"blue", radius:"128"} );
-		this._shapes.push(new Shape("a", new Vector({x:0,y:0}), [style]));
-		this._shapes.push(new Shape("b", new Vector({x:0,y:0}), [style]));
-		this._shapes.push(new Shape("c", new Vector({x:0,y:0}), [style]));
-		this._shapes.push(new Shape("d", new Vector({x:0,y:0}), [style]));
+		let style = new Style({name: "test", shape:"circle", color:"blue", 
+			radius:"128", iconColor:"white", iconSize:"160"} );
+		this._elements.push(new Element("a", new Vector({x:0,y:0}), [style,
+			new Style({ iconOffsetX:"32", iconOffsetY:"32"})], null, "App"));
+		this._elements.push(new Element("b", new Vector({x:0,y:0}), [style,
+			new Style({ iconOffsetX:"-32", iconOffsetY:"32"})], null, "Options"));
+		this._elements.push(new Element("c", new Vector({x:0,y:0}), [style,
+			new Style({ iconOffsetX:"32", iconOffsetY:"-32"})], null, "Test"));
+		this._elements.push(new Element("d", new Vector({x:0,y:0}), [style]));
 	}
 
 
@@ -69,34 +73,20 @@ export class MenuLayer extends Layer {
 		ctx.clearRect(0,0,w,h);
 
 
-		this._shapes[0].position.set(64,64);
-		this._shapes[1].position.set(w-64,64);
-		this._shapes[2].position.set(64,h-64);
-		this._shapes[3].position.set(w-64,h-64);
+		this._elements[0].position.set(64,64);
+		this._elements[1].position.set(w-64,64);
+		this._elements[2].position.set(64,h-64);
+		this._elements[3].position.set(w-64,h-64);
 		
 
-		// Draw the shapes
-		let shapeIndex, shapeCount = this._shapes.length;
-		for (shapeIndex = 0; shapeIndex < shapeCount; shapeIndex++) {
-			this._shapes[shapeIndex].draw(ctx);
+		// Draw the elements
+		let elementIndex, elementCount = this._elements.length;
+		for (elementIndex = 0; elementIndex < elementCount; elementIndex++) {
+			this._elements[elementIndex].draw(ctx);
 		}
 		
 
 		// ctx.fillStyle = 'red';
 		// ctx.fillRect(50,50,w/2,h/2);
 	}
-
-	// handleEvent(event: any) {
-
-	// 	let cursor = new Vector({x: event.clientX, y: event.clientY});
-	// 	// Travel the array of shapes in reverse
-	// 	let shapeIndex, shapeCount = this._shapes.length;
-	// 	for (shapeIndex = shapeCount - 1; shapeIndex >= 0; shapeIndex--) {
-	// 		let shape = this._shapes[shapeIndex];
-	// 		if (shape.isInside(cursor)) {
-
-	// 		}
-	// 	}
-	// }
-
 }

@@ -1,7 +1,7 @@
 import { Ontology } from "../../data/model/Ontology";
 import { Vector } from "../../data/model/Vector";
 import { Layer } from "../Layer";
-import { Shape } from "../Shape";
+import { Element } from "../Element";
 import { Style } from "../../data/model/Style";
 import { createElement } from "../Viewport";
 import { Widget } from "../Widget";
@@ -20,12 +20,12 @@ export class Graph extends Widget {
 	/** The translation vector. */
 	private _translate: Vector;
 
-	private _shapes: Shape[] = [];
+	private _elements: Element[] = [];
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
-	/** The shapes of the layer. */
-	// get shapes(): Shape[] { return this._shapes; }
+	/** The elements of the layer. */
+	// get elements(): Element[] { return this._elements; }
 
 
 	// ------------------------------------------------------------ CONSTRUCTOR
@@ -75,7 +75,7 @@ export class Graph extends Widget {
 		ctx.fillStyle = 'black'; ctx.font = "16px Arial";
 		ctx.textAlign = 'center'; ctx.textBaseline = "middle";
 
-		this._shapes = [];
+		this._elements = [];
 		
 		for (let relationName in o.relations) {
 			let r = o.relations[relationName];
@@ -101,10 +101,10 @@ export class Graph extends Widget {
 		for (let className in o.classes) {
 			let c = o.classes[className];
 
-			let shape = new Shape(c.name, c.positions[0], [style], c.name);
-			this._shapes.push(shape);
+			let element = new Element(c.name, c.positions[0], [style], c.name);
+			this._elements.push(element);
 
-			shape.draw(ctx);
+			element.draw(ctx);
 		}
 		
 

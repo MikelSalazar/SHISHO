@@ -5,6 +5,7 @@ import { Vector } from "./Vector.js";
 /** Defines a Class of an Ontology. */
 export class Class extends Node {
 
+
 	// ------------------------------------------------------------ CONSTRUCTOR
 
 	/** Initializes a new Class instance.

@@ -165,7 +165,7 @@ export class Dialog extends Widget {
 			case "Export": return new Dialog("Export", layer, "Export File...", 
 				[
 					new Selector("FileType", null, "File Type: ", 
-						["OWL", "SCHEMA.JSON", "SQL"]),
+						["OWL", "SCHEMA.JSON", "SQL", "JS Code"]),
 				],[
 					new Button("Cancel", null, "Cancel"),
 					new Button("Export", null, "Export",

@@ -1,5 +1,4 @@
 import { Layer } from "../Layer";
-import { Shape } from "../Shape";
 import { Viewport } from "../Viewport";
 import { Graph } from "../widgets/Graph";
 

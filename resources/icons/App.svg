@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
+   version="1.1"
+   id="svg8"
+   inkscape:version="1.0.1 (3bc2e813f5, 2020-09-07)"
+   sodipodi:docname="App.svg"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90">
+  <defs
+     id="defs21" />
+  <title
+     id="title835">SHISHO Icon</title>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.5668874"
+     inkscape:cx="314.04361"
+     inkscape:cy="233.5115"
+     inkscape:document-units="px"
+     inkscape:current-layer="svg8"
+     inkscape:document-rotation="0"
+     showgrid="true"
+     borderlayer="true"
+     inkscape:pagecheckerboard="true"
+     units="px"
+     inkscape:window-width="1920"
+     inkscape:window-height="1057"
+     inkscape:window-x="3832"
+     inkscape:window-y="1083"
+     inkscape:window-maximized="1"
+     inkscape:snap-bbox="true"
+     inkscape:bbox-paths="true"
+     inkscape:bbox-nodes="true"
+     inkscape:snap-bbox-edge-midpoints="true"
+     inkscape:snap-bbox-midpoints="true"
+     inkscape:snap-object-midpoints="true"
+     inkscape:snap-center="true"
+     inkscape:snap-text-baseline="true"
+     inkscape:snap-page="true"
+     scale-x="1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid837"
+       spacingx="4.2333331"
+       spacingy="4.2333331"
+       units="px"
+       empspacing="4" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title>Pleiades Icon</dc:title>
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>Mikel Salazar</dc:title>
+          </cc:Agent>
+        </dc:creator>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <path
+     id="Connections"
+     fill="#4facfe"
+     d="m 271.83223,123.93778 -88.90151,161.1114 7.69932,4.25201 88.9015,-161.1114 z m 17.22091,12.33414 -3.53519,8.05479 108.39002,47.62755 3.53519,-8.04697 z m 108.01308,57.60033 a 4.3966097,4.3966097 0 0 0 -0.13266,0.002 4.3966097,4.3966097 0 0 0 -4.08209,3.18949 l -19.97485,69.9208 a 4.3966097,4.3966097 0 0 0 3.01957,5.43366 4.3966097,4.3966097 0 0 0 5.43365,-3.01957 l 19.9827,-69.92275 a 4.3966097,4.3966097 0 0 0 -3.02741,-5.43171 4.3966097,4.3966097 0 0 0 -1.21876,-0.17189 z m -25.90071,90.50505 c -2.84772,0 -5.15632,2.41459 -5.15632,5.3946 0,2.98 2.3086,5.39654 5.15632,5.39654 2.8477,0 5.15631,-2.41654 5.15631,-5.39654 0,-2.98001 -2.30861,-5.3946 -5.15631,-5.3946 z m -192.09422,8.22666 a 4.3966097,4.3966097 0 0 0 -3.98833,2.58011 4.3966097,4.3966097 0 0 0 2.18558,5.82429 l 75.1865,34.15668 a 4.3966097,4.3966097 0 0 0 5.82428,-2.18557 4.3966097,4.3966097 0 0 0 -2.18557,-5.8243 l -75.1865,-34.15667 a 4.3966097,4.3966097 0 0 0 -1.66017,-0.39063 4.3966097,4.3966097 0 0 0 -0.17578,-0.004 z m 187.00431,12.66032 a 4.3966097,4.3966097 0 0 0 -0.13085,0.004 4.3966097,4.3966097 0 0 0 -4.08208,3.18168 l -16.80099,58.71948 -61.40312,-27.03548 a 4.3966097,4.3966097 0 0 0 -1.66213,-0.37698 4.3966097,4.3966097 0 0 0 -4.13286,2.627 4.3966097,4.3966097 0 0 0 2.25003,5.79499 l 62.50664,27.52381 -0.76368,2.66993 a 4.3966097,4.3966097 0 0 0 3.01957,5.4317 4.3966097,4.3966097 0 0 0 5.43366,-3.01954 l 0.43164,-1.50782 3.15629,1.39062 a 4.3966097,4.3966097 0 0 0 5.795,-2.25199 4.3966097,4.3966097 0 0 0 -2.25198,-5.79499 l -4.25787,-1.87501 17.13108,-59.87382 a 4.3966097,4.3966097 0 0 0 -3.01762,-5.44148 4.3966097,4.3966097 0 0 0 -1.22071,-0.166 z" />
+  <path
+     id="Stars"
+     fill="#ffffff"
+     d="m 132.51993,103.88675 -6.04695,11.44154 -12.44548,1.26956 8.53138,9.57824 -2.72661,12.76774 11.33803,-5.50788 10.77163,6.6114 -1.51174,-12.96695 9.36731,-8.67394 -12.28337,-2.5137 z m 129.47234,0.14064 -4.29108,23.84405 -21.19168,9.8302 20.35378,11.63882 2.37503,24.1546 16.87326,-16.66818 22.67607,5.08601 -9.93373,-21.92216 11.63492,-20.99049 -23.00029,3.07816 z m 125.61289,51.67057 -4.29301,23.8714 -21.21903,9.8302 20.35573,11.63882 2.37502,24.1253 16.87328,-16.63888 22.67605,5.086 -9.90638,-21.92215 11.63493,-21.01979 -23.0003,3.10746 z m -282.70276,33.67425 -3.18559,17.79711 -15.818559,7.31649 15.172069,8.67199 1.75393,18.02366 12.58023,-12.42984 16.926,3.7852 -7.39658,-16.35567 8.66612,-15.65059 -17.14279,2.31643 z m 62.19999,64.46566 -4.64458,25.93392 -23.08038,10.67786 22.137,12.65641 2.58988,26.24448 18.33032,-18.10766 24.64873,5.56453 -10.77161,-23.8714 12.63297,-22.82646 -24.9964,3.39068 z m 167.64469,83.13971 -4.40045,24.43784 -21.73074,10.05677 20.84011,11.92199 2.42971,24.71907 17.27757,-17.06467 23.21708,5.22662 -10.15052,-22.45925 11.90445,-21.49833 -23.54131,3.1641 z" />
+</svg>
