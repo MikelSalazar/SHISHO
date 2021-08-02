@@ -1,17 +1,17 @@
 import { Class } from "../model/Class.js";
 import { Relation } from "../model/Relation.js";
-import { Vector } from "../model/Vector.js";
+import { Vector } from "../types/Vector.js";
 
-/** Manages the importain of ontologies from OWL files. */
+/** Manages the importation of ontologies from OWL files. */
 export class OwlImporter {
 
-	// ------------------------------------------------------------ CONSTRUCTOR
+	// --------------------------------------------------------- PUBLIC METHODS
 
 	/** Imports the data from a OWL file
-	 * @param ontology The ontology to import data to.
-	 * @param data The data of the ontology.
-	 * @param replace Whether to replace (default) or append the new data). */
-	constructor(ontology, data, replace = true) {
+	 * @param root The root of the SHISHO data model.
+	 * @param data The JSON file data.
+	 * @param combine Whether to combine (default) or append the new data). */
+	static import(root, data, combine = true) {
 
 		// Parse the data string
 		let parser = new DOMParser();
@@ -25,9 +25,11 @@ export class OwlImporter {
 		if (!mainNode)
 			throw new Error("Invalid OWL File. ");
 
+		// Operate in the ontology
+		let ontology = root.ontology;
 
 		// Clean the previous ontology data
-		if (replace)
+		if (!combine)
 			ontology.deserialize();
 
 		// Extract the useful data
@@ -106,9 +108,8 @@ export class OwlImporter {
 	}
 
 
-	// --------------------------------------------------------- PUBLIC METHODS
 
-	getName(element) {
+	static getName(element) {
 		let name, className = null;
 		for (let attribute of element.attributes) {
 			switch (attribute.name.toLowerCase()) {
@@ -121,11 +122,11 @@ export class OwlImporter {
 		return name;
 	}
 
-	extractName(node) { return node.textContent.split('#')[1]; }
+	static extractName(node) { return node.textContent.split('#')[1]; }
 
 
 	/** Looks recursively for an element with a particular name  */
-	findElement(name, start) {
+	static findElement(name, start) {
 		let elements = [start];
 		while (elements.length > 0) { // Depth first search
 			let element = elements.pop();

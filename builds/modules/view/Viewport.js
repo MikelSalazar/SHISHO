@@ -18,11 +18,14 @@ export class Viewport {
 		/** The layers of the viewport. */
 		this._layers = {};
 
+		/** */
+		this._DrawTime = 1;
+
 		this._app = app;
 		this._parentElement = params.parentElement || document.body;
 		let instanceNumber = SHISHO.instances.length;
 
-		// Ceate the CSS styles if 
+		// Create the CSS styles if they don't exist
 		if (instanceNumber == 1) {
 			createCssRule(".ShishoViewport", "position: relative;" +
 				"width: 100%; height: 100%; margin:0; overflow: hidden;");

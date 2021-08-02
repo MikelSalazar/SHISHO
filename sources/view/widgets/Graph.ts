@@ -1,5 +1,5 @@
 import { Ontology } from "../../data/model/Ontology";
-import { Vector } from "../../data/model/Vector";
+import { Vector } from "../../data/types/Vector";
 import { Layer } from "../Layer";
 import { Element } from "../Element";
 import { Style } from "../../data/model/Style";
@@ -70,7 +70,7 @@ export class Graph extends Widget {
 
 		// Get the ontology data
 		let o : Ontology = (this.parent as Layer ).viewport.app.data.ontology;
-
+		if (!o) return;
 
 		ctx.fillStyle = 'black'; ctx.font = "16px Arial";
 		ctx.textAlign = 'center'; ctx.textBaseline = "middle";

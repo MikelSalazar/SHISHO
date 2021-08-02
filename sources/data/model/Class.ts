@@ -1,6 +1,6 @@
 import { Node } from "../Node";
 import { Property } from "./Property";
-import { Vector } from "./Vector";
+import { Vector } from "../types/Vector";
 
 /** Defines a Class of an Ontology. */
 export class Class extends Node {
@@ -24,22 +24,31 @@ export class Class extends Node {
 
 	/** Initializes a new Class instance.
 	 * @param data The initialization data. */
-	constructor(data: any = {}) { super(data); }
+	constructor(data: any = null) { super(data); }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data: any) {
-		if (!data.name) throw Error("Class without name");
-		this.name = data.name; this.description = data.description || "";
-		this.properties = {};
+	/** Deserializes the Class instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data: any = {}, combine = true) {
+
+		// Check if we have to clean the data (when not combining)
+		if (!combine || !this.name) {
+			this.name = data.name; this.description = data.description;
+			this.properties = {}; this.positions = [];
+		}
+
+		// Deserialize the properties of the class
 		if (data.properties) data.properties.forEach(propertyData => {
-			if (!propertyData.name) throw Error("Property without name");
-			this.properties[propertyData.name] = new Property(propertyData);
+			let name = propertyData.name;
+			if (!name) throw Error ("Property without name.");
+			if (!this.properties[name]) this.properties[name] = new Property();
+			this.properties[name].deserialize(propertyData, combine);
 		});
-		this.positions = [];
+		
+		// Deserialize the positions of the class
 		if (data.positions) data.positions.forEach(positionData => {
 			this.positions.push(new Vector(positionData));
 		});

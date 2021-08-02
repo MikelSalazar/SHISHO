@@ -9,18 +9,27 @@
 	</head>
 	<body>
 		<script id="OntologyData">
+
+// Create the basic example data
 let OntologyData = {
-	
+	"name": "Basic Example",
+	"description": "This is an basic example",
 	"ontology": {
-		"name": "Ontology Example",
-		"description": "This is an ontology example",
 		"classes": {
-			"Class1": { "name" : "Class1", "positions": [[500, 500]]}
+			"Class1": { "name" : "Class1Name", "positions": [[200, 500]]},
+			"Class2": { "name" : "Class2Name", "positions": [[600, 500]]}
+		},
+		"relations": {
+			"Relation": { "name" : "RelationName", "origin": "Class1", "target": "Class2"},
 		}
-	},
-	"relations": []
+	}
 }
 		</script>
-		<script> SHISHO.init({dataElement:"OntologyData"});</script>
+		<script> 
+
+// Initialize the SHISHO framework
+SHISHO.init({data: OntologyData, dataElement:"OntologyData"});
+
+		</script>
 	</body>
 </html>

@@ -1,4 +1,4 @@
-import { Vector } from "../../data/model/Vector";
+import { Vector } from "../../data/types/Vector";
 import { Layer } from "../Layer";
 import { Element } from "../Element";
 import { Style } from "../../data/model/Style";

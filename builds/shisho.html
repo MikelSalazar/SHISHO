@@ -29,24 +29,29 @@ class SHISHO {
 		SHISHO.instances.push(this);
 
 		// Create an empty ontology
-		this._data = new Root({ name: "unnamed_ontology" });
+		this._data = new Root();
 
 		// Create a new viewport
 		this.viewports.push(new Viewport(this, params));
 
+		// Check if there is a data element to analyze
+		if (params.dataElement) {
+			this._dataElement = document.getElementById(params.dataElement);
+		}
+		else
+			this._dataElement = document.getElementById(iS + "Data");
+
 		// Get the data from the parameters
 		if (params.data) {
-			if (typeof params.dataElement === 'string') {
+			if (typeof params.data === 'string') {
 				this._dataElement = document.getElementById(params.dataElement);
 				if (!this._dataElement)
 					throw new Error("Invalid data element");
 			}
-			else
-				this._dataElement = params.dataElement;
+
+			// Try to deserialize the given data
+			this.deserialize(params.data);
 		}
-		else
-			this._dataElement = document.getElementById(iS + "Data");
-		this.deserialize(params.data);
 
 		// Show a message on console
 		console.log(SHISHO.AppName + " " + SHISHO.AppVersion + " Initialized");
@@ -82,12 +87,6 @@ class SHISHO {
 	/** Loads the SHISHO data.
 	 * @param data The data to load. */
 	deserialize(data) {
-
-		// If there is no data, try to get it from other sources
-		if (!data) {
-			if (this._dataElement)
-				data = this._dataElement.textContent;
-		}
 
 		// Analyze the data
 		try {
@@ -150,6 +149,41 @@ SHISHO.resources = {};
 
 
 
+/** Defines an exporter to JSON Files. */
+class JsonExporter {
+
+	/** Exports the data of an ontology as a JSON file.
+	 * @param ontology The ontology to export.
+	 * @return The JSON file with the ontology data. */
+	static export(ontology) {
+
+		// Simply use JSON.stringify to convert to JSON
+		let data = ontology.serialize();
+
+		// Create a false link to download the data
+		let blob = new Blob([data], { type: "text/plain;charset=utf-8" });
+		let url = window.URL.createObjectURL(blob);
+		let link = document.createElement("a");
+		document.body.appendChild(link);
+		link.style.display = "none";
+		link.href = url;
+		link.download = "file.json";
+		link.click();
+		setTimeout(function () {
+			document.body.removeChild(link);
+			window.URL.revokeObjectURL(url);
+		}, 0);
+
+		// Return the JSON Schema
+		return data;
+	}
+}
+
+
+
+
+
+
 /** Defines an exporter to JSON Schemas. */
 class JsonSchemaExporter {
 
@@ -193,6 +227,8 @@ class JsonSchemaExporter {
 		return data;
 	}
 }
+
+
 
 
 
@@ -244,19 +280,39 @@ class SqlExporter {
 
 
 
-
-
-
-/** Manages the importain of ontologies from OWL files. */
-class OwlImporter {
+/** Manages the importation of ontologies from JSON files. */
+class JsonImporter {
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
+	/** Imports the data from a JSON file
+	 * @param root The root of the SHISHO data model.
+	 * @param data The JSON file data.
+	 * @param combine Whether to combine (default) or append the new data). */
+	static import(root, data, combine = true) {
+
+		// Parse the Json data
+		let jsonData = JSON.parse(data);
+
+		// deserialize the JSON data
+		root.deserialize(jsonData, combine);
+	}
+}
+
+
+
+
+
+/** Manages the importation of ontologies from OWL files. */
+class OwlImporter {
+
+	// --------------------------------------------------------- PUBLIC METHODS
+
 	/** Imports the data from a OWL file
-	 * @param ontology The ontology to import data to.
-	 * @param data The data of the ontology.
-	 * @param replace Whether to replace (default) or append the new data). */
-	constructor(ontology, data, replace = true) {
+	 * @param root The root of the SHISHO data model.
+	 * @param data The JSON file data.
+	 * @param combine Whether to combine (default) or append the new data). */
+	static import(root, data, combine = true) {
 
 		// Parse the data string
 		let parser = new DOMParser();
@@ -270,9 +326,11 @@ class OwlImporter {
 		if (!mainNode)
 			throw new Error("Invalid OWL File. ");
 
+		// Operate in the ontology
+		let ontology = root.ontology;
 
 		// Clean the previous ontology data
-		if (replace)
+		if (!combine)
 			ontology.deserialize();
 
 		// Extract the useful data
@@ -351,9 +409,8 @@ class OwlImporter {
 	}
 
 
-	// --------------------------------------------------------- PUBLIC METHODS
 
-	getName(element) {
+	static getName(element) {
 		let name, className = null;
 		for (let attribute of element.attributes) {
 			switch (attribute.name.toLowerCase()) {
@@ -366,11 +423,11 @@ class OwlImporter {
 		return name;
 	}
 
-	extractName(node) { return node.textContent.split('#')[1]; }
+	static extractName(node) { return node.textContent.split('#')[1]; }
 
 
 	/** Looks recursively for an element with a particular name  */
-	findElement(name, start) {
+	static findElement(name, start) {
 		let elements = [start];
 		while (elements.length > 0) { // Depth first search
 			let element = elements.pop();
@@ -389,19 +446,24 @@ class Node {
 
 	/** Initializes a new Node instance.
 	 * @param data The data of the Node. */
-	constructor(data = {}) { this.deserialize(data); }
+	constructor(data = null) { if (data)
+		this.deserialize(data, false); }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
 	/** Serializes the instance.
 	 * @return The JSON representation of the instance. */
-	serialize() { return null; }
+	serialize() { return JSON.stringify(this, null, '\t'); }
 
 
 	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data) { }
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data = {}, combine = true) {
+		if (typeof data == "string")
+			return JSON.parse(data);
+	}
 }
 
 
@@ -416,7 +478,7 @@ class Class extends Node {
 
 	/** Initializes a new Class instance.
 	 * @param data The initialization data. */
-	constructor(data = {}) {
+	constructor(data = null) {
 		super(data);
 
 		/** The properties of the class. */
@@ -429,58 +491,37 @@ class Class extends Node {
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data) {
-		if (!data.name)
-			throw Error("Class without name");
-		this.name = data.name;
-		this.description = data.description || "";
-		this.properties = {};
+	/** Deserializes the Class instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data = {}, combine = true) {
+
+		// Check if we have to clean the data (when not combining)
+		if (!combine || !this.name) {
+			this.name = data.name;
+			this.description = data.description;
+			this.properties = {};
+			this.positions = [];
+		}
+
+		// Deserialize the properties of the class
 		if (data.properties)
 			data.properties.forEach(propertyData => {
-				if (!propertyData.name)
-					throw Error("Property without name");
-				this.properties[propertyData.name] = new Property(propertyData);
+				let name = propertyData.name;
+				if (!name)
+					throw Error("Property without name.");
+				if (!this.properties[name])
+					this.properties[name] = new Property();
+				this.properties[name].deserialize(propertyData, combine);
 			});
-		this.positions = [];
+
+		// Deserialize the positions of the class
 		if (data.positions)
 			data.positions.forEach(positionData => {
 				this.positions.push(new Vector(positionData));
 			});
 	}
 }
-
-
-
-/** Defines a RGB Color. */
-class Color extends Node {
-
-
-	// ------------------------------------------------------------ CONSTRUCTOR
-
-	/** Initializes a new instance of the vector class.
-	 * @param data The initialization data. */
-	constructor(data = {}) { super(data); }
-
-
-	// --------------------------------------------------------- PUBLIC METHODS
-
-	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data) { this.set(data.r, data.g, data.b); }
-
-	/** Sets the values of the color.
-	 * @param r The value of the Red component color
-	 * @param g The value of the Green component color.
-	 * @param b The value of the Blue component color. */
-	set(r = 0, g = 0, b = 0) {
-		this.r = r;
-		this.g = g;
-		this.b = b;
-	}
-}
-
 
 
 
@@ -494,39 +535,58 @@ class Ontology extends Node {
 
 	/** Initializes a new instance of the Ontology class.
 	 * @param data The initialization data. */
-	constructor(data = {}) {
+	constructor(data = null) {
 		super(data);
+
+		// ---------------------------------------------------------- PUBLIC FIELDS
 
 		/** The classes of the ontology. */
 		this.classes = {};
 
-		/** The realtions of the classes. */
+		/** The relations between classes. */
 		this.relations = {};
 	}
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data = {}) {
-		// if (!data.name) throw Error("Ontology without name");
-		this.name = data.name;
-		this.description = data.description || "";
-		this.classes = {};
-		if (data.classes)
-			data.classes.forEach(classData => {
-				if (!classData.name)
-					throw Error("Class without name");
-				this.classes[classData.name] = new Class(classData);
+	/** Deserializes the Ontology instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data = {}, combine = true) {
+
+		// If we combine the ontology
+		if (!combine) {
+			this.classes = {};
+			this.relations = {};
+		}
+
+		// Parse the classes
+		if (data.classes) {
+			let classIds = Object.keys(data.classes);
+			classIds.forEach(classId => {
+				let classData = data.classes[classId];
+				if (!classId)
+					throw Error("Class without name.");
+				if (!this.classes[classId])
+					this.classes[classId] = new Class();
+				this.classes[classId].deserialize(classData, combine);
 			});
-		this.relations = {};
-		if (data.relations)
-			data.relations.forEach(relationData => {
-				if (!relationData.name)
-					throw Error("Relation without name");
-				this.relations[relationData.name] = new Relation(relationData);
+		}
+
+		// Parse the relations
+		if (data.relations) {
+			let relationIds = Object.keys(data.relations);
+			relationIds.forEach(relationId => {
+				let relationData = data.relations[relationId];
+				if (!relationId)
+					throw Error("Class without name.");
+				if (!this.relations[relationId])
+					this.relations[relationId] = new Relation();
+				this.relations[relationId].deserialize(relationData, combine);
 			});
+		}
+
 	}
 }
 
@@ -540,14 +600,15 @@ class Property extends Node {
 
 	/** Initializes a new Property instance.
 	 * @param data The initialization data. */
-	constructor(data = {}) { super(data); }
+	constructor(data = null) { super(data); }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data) {
+	/** Deserializes the Property instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data = {}, combine = true) {
 		if (!data.name)
 			throw Error("Property without name");
 		this.name = data.name;
@@ -565,14 +626,15 @@ class Relation extends Node {
 
 	/** Initializes a new Relation instance.
 	 * @param data The initialization data. */
-	constructor(data = {}) { super(data); }
+	constructor(data = null) { super(data); }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data) {
+	/** Deserializes the Relation instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data = {}, combine = true) {
 		if (!data.name)
 			throw Error("Relation without name");
 		this.name = data.name;
@@ -585,6 +647,7 @@ class Relation extends Node {
 
 
 
+
 /** Defines the Root of a SHISHO data model. */
 class Root extends Node {
 
@@ -592,8 +655,11 @@ class Root extends Node {
 
 	/** Initializes a new instance of the Ontology class.
 	 * @param data The initialization data. */
-	constructor(data = {}) {
+	constructor(data = null) {
 		super(data);
+
+		/** The ontology data. */
+		this.ontology = new Ontology();
 
 		/** The graphical styles. */
 		this.styles = {};
@@ -602,13 +668,38 @@ class Root extends Node {
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data = {}) {
-		this.name = data.name;
-		this.description = data.description;
-		this.author = data.author;
-		this.ontology = new Ontology(data.ontology);
+	/** Deserializes the Root instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data = {}, combine = true) {
+
+		// Check if we have to clean the data (when not combining)
+		if (!this.name || !combine)
+			this.name = data.name || "Untitled";
+		if (!this.description || !combine)
+			this.description = data.description;
+		if (!combine)
+			this.ontology = new Ontology();
+		this.styles = {};
+
+		// Deserialize the ontology data
+		if (data.ontology)
+			this.ontology.deserialize(data.ontology, combine);
+
+		// Deserialize the graphical styles
+		if (data.styles)
+			data.styles.forEach(styleData => {
+				let styleName = styleData.name;
+				if (!styleName)
+					throw Error("Style without name.");
+				if (!this.styles[styleName])
+					this.styles[styleName] = new Style();
+				this.styles[styleName].deserialize(styleData, combine);
+			});
+
+		// If the name is null or undefined, give it a valid value
+		if (!this.name)
+			this.name = "Untitled Document";
 	}
 }
 
@@ -622,7 +713,7 @@ class Style extends Node {
 
 	/** Initializes a new Style instance.
 	 * @param data The initialization data. */
-	constructor(data = {}) { super(data); }
+	constructor(data = null) { super(data); }
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
@@ -703,11 +794,13 @@ class Style extends Node {
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data) {
+	/** Deserializes the Style instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data = {}, combine = true) {
 
 		// Save the name and the parent of the instance
+		// if (!data.name) throw Error("Style without name");
 		this._name = data.name;
 		this._parent = data.parent;
 		this._children = [];
@@ -779,6 +872,37 @@ class Style extends Node {
 
 
 
+/** Defines a RGB Color. */
+class Color extends Node {
+
+
+	// ------------------------------------------------------------ CONSTRUCTOR
+
+	/** Initializes a new instance of the vector class.
+	 * @param data The initialization data. */
+	constructor(data = {}) { super(data); }
+
+
+	// --------------------------------------------------------- PUBLIC METHODS
+
+	/** Deserializes the instance.
+	 * @data The data to deserialize. */
+	deserialize(data) { this.set(data.r, data.g, data.b); }
+
+	/** Sets the values of the color.
+	 * @param r The value of the Red component color
+	 * @param g The value of the Green component color.
+	 * @param b The value of the Blue component color. */
+	set(r = 0, g = 0, b = 0) {
+		this.r = r;
+		this.g = g;
+		this.b = b;
+	}
+}
+
+
+
+
 /** Defines a bi-dimensional Vector. */
 class Vector extends Node {
 
@@ -794,7 +918,12 @@ class Vector extends Node {
 
 	/** Deserializes the instance.
 	 * @data The data to deserialize. */
-	deserialize(data) { this.set(data.x, data.y); }
+	deserialize(data) {
+		if (Array.isArray(data))
+			this.set(data[0], data[1]);
+		else
+			this.set(data.x, data.y);
+	}
 
 
 	/** Sets the values of the vector.
@@ -1317,11 +1446,14 @@ class Viewport {
 		/** The layers of the viewport. */
 		this._layers = {};
 
+		/** */
+		this._DrawTime = 1;
+
 		this._app = app;
 		this._parentElement = params.parentElement || document.body;
 		let instanceNumber = SHISHO.instances.length;
 
-		// Ceate the CSS styles if 
+		// Create the CSS styles if they don't exist
 		if (instanceNumber == 1) {
 			createCssRule(".ShishoViewport", "position: relative;" +
 				"width: 100%; height: 100%; margin:0; overflow: hidden;");
@@ -1579,6 +1711,8 @@ class Button extends Widget {
 
 
 
+
+
 /** Defines a dialog window. */
 class Dialog extends Widget {
 
@@ -1671,10 +1805,12 @@ class Dialog extends Widget {
 	/** Simplifies the creation of dialog windows. */
 	static create(type, layer, title = null, message = null) {
 
+		let root = layer.viewport.app.data;
+
 		switch (type) {
 			case "Import": return new Dialog("Import", layer, "Import File...", [
 				new FileInput("FileInput", null, "File: "),
-				new Selector("FileType", null, "File Type: ", ["OWL", "JSON"]),
+				new Selector("FileType", null, "File Type: ", ["JSON", "OWL"]),
 			], [
 				new Button("Cancel", null, "Cancel"),
 				new Button("Import", null, "Import", [(button) => {
@@ -1687,7 +1823,15 @@ class Dialog extends Widget {
 						try { // to load the ontology
 							if (fileInput.filePath == null)
 								throw Error("No file provided.");
-							new OwlImporter(layer.viewport.app.data.ontology, fileInput.fileData);
+							let data = fileInput.fileData;
+							switch (fileType.selectedOption) {
+								case "JSON":
+									JsonImporter.import(root, data);
+									break;
+								case "OWL":
+									OwlImporter.import(root, data);
+									break;
+							}
 						}
 						catch (e) {
 							console.error(e);
@@ -1697,7 +1841,7 @@ class Dialog extends Widget {
 					}]),
 			], new Background("ImportBackground", layer));
 			case "Export": return new Dialog("Export", layer, "Export File...", [
-				new Selector("FileType", null, "File Type: ", ["OWL", "SCHEMA.JSON", "SQL"]),
+				new Selector("FileType", null, "File Type: ", ["JSON", "OWL", "SCHEMA.JSON", "SQL",]),
 			], [
 				new Button("Cancel", null, "Cancel"),
 				new Button("Export", null, "Export", [(button) => {
@@ -1707,9 +1851,11 @@ class Dialog extends Widget {
 						let ontology = layer.viewport.app.data.ontology;
 						let data = "";
 						switch (fileType.selectedOption) {
+							case "JSON":
+								data = JsonExporter.export(ontology);
+								break;
 							case "OWL":
 								data = OwlExporter.export(ontology);
-
 								break;
 							case "SCHEMA.JSON":
 								data = JsonSchemaExporter.export(ontology);
@@ -1849,7 +1995,8 @@ class Graph extends Widget {
 
 		// Get the ontology data
 		let o = this.parent.viewport.app.data.ontology;
-
+		if (!o)
+			return;
 
 		ctx.fillStyle = 'black';
 		ctx.font = "16px Arial";

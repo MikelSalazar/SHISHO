@@ -37,9 +37,7 @@
   "homepage": "https://github.com/MikelSalazar/SHISHO#readme",
   "devDependencies": {
     "electron": "^13.0.1",
-    "terser": "^5.7.0"
-  },
-  "dependencies": {
+    "terser": "^5.7.0",
     "xml-js": "^1.6.11"
   }
 }

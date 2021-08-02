@@ -24,34 +24,28 @@
 					"$comment": "The author(s) of the SHISHO document",
 					"type": "string"
 				},
-				"onthology": {
-					"$comment": "The onthology data",
-					"$ref": "#/definitions/onthology"					
+				"ontology": {
+					"$comment": "The ontology data",
+					"$ref": "#/definitions/ontology"
 				},
 				"styles": {
-					"$comment": "The onthology data",
+					"$comment": "The ontology data",
 					"$ref": "#/definitions/style"
 				}
 			},
 			"required": ["SHISHO", "name"]
 		},
 
-		"onthology": {
-			"$comment": "The onthology data",
+		"ontology": {
+			"$comment": "The ontology data",
 			"properties": {
-				"name": { 
-					"$comment": "The name of the ontology",
-					"type": "string"
-				},
-				"description": { 
-					"$comment": "The description of the ontology",
-					"type": "string"
-				},
 				"classes": {
+					"$comment": "The classes of the ontology",
 					"type": "array",
 					"allOf": [{"$ref": "#/definitions/class"}]
 				},
 				"relations": {
+					"$comment": "The relations between classes of the ontology",
 					"type": "array",
 					"allOf": [{"$ref": "#/definitions/relation"}]
 				}

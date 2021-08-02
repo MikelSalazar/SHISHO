@@ -5,7 +5,7 @@
 // Require the necessary Nodejs packages
 const path = require("path"), 			// File Path handling
 	fs = require("fs"),					// File System access
-	parser = require('xml-js'),		// XML Data parser
+	parser = require('xml-js'),			// XML Data parser
 	exec = require('child_process');	// External command execution
 
 //------------------------------------------------------------ GLOBAL FUNCTIONS
@@ -72,7 +72,7 @@ let outputFolderPath = rootFolderPath + "builds/";
 let temporalFolderPath = outputFolderPath + "temporal/";
 let modulesFolderPath = outputFolderPath + "modules/";
 let outputFilePath = outputFolderPath + outputFileName;
-let sourceFiles = [], resourcefiles = [];
+let sourceFiles = [], resourceFiles = [];
 
 //----------------------------------------------------------------- ENTRY POINT
 
@@ -89,7 +89,7 @@ sourceFiles = findFilesInFolder(sourcesFolderPath);
 
 // Identify the resource files
 console.log('Identifying resource files...');
-resourcefiles = findFilesInFolder(resourcesFolderPath);
+resourceFiles = findFilesInFolder(resourcesFolderPath);
 
 // Create a temporal copy of the files and prepare them for transpilation
 console.log('Preprocessing source files...');
@@ -213,10 +213,10 @@ for (lineIndex = 0; lineIndex < lineCount; lineIndex++) {
 // Add the resources to the main file
 let resourceData = "// --------------------------------------------------" +
 	" RESOURCE DATA \n" + mainFileName + ".resources = {\n"  ; 
-fileCount = resourcefiles.length;
+fileCount = resourceFiles.length;
 for (fileIndex = 0; fileIndex < fileCount; fileIndex++) {
 	if (fileIndex > 0) resourceData += ',\n';
-	let resourceFile = resourcefiles[fileIndex];
+	let resourceFile = resourceFiles[fileIndex];
 	let fileName = path.parse(resourceFile).name,
 		fileExt = path.extname(resourceFile),
 		fileData = fs.readFileSync(resourcesFolderPath + resourceFile, 'utf8');

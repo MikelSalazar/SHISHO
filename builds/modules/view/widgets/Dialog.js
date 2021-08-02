@@ -9,6 +9,8 @@ import { Selector } from "./Selector.js";
 import { JsonSchemaExporter } from "../../data/exporters/JsonSchemaExporter.js";
 import { OwlExporter } from "../../data/exporters/OwlExporter.js";
 import { SqlExporter } from "../../data/exporters/SqlExporter.js";
+import { JsonExporter } from "../../data/exporters/JsonExporter.js";
+import { JsonImporter } from "../../data/importers/JsonImporter.js";
 
 /** Defines a dialog window. */
 export class Dialog extends Widget {
@@ -102,10 +104,12 @@ export class Dialog extends Widget {
 	/** Simplifies the creation of dialog windows. */
 	static create(type, layer, title = null, message = null) {
 
+		let root = layer.viewport.app.data;
+
 		switch (type) {
 			case "Import": return new Dialog("Import", layer, "Import File...", [
 				new FileInput("FileInput", null, "File: "),
-				new Selector("FileType", null, "File Type: ", ["OWL", "JSON"]),
+				new Selector("FileType", null, "File Type: ", ["JSON", "OWL"]),
 			], [
 				new Button("Cancel", null, "Cancel"),
 				new Button("Import", null, "Import", [(button) => {
@@ -118,7 +122,15 @@ export class Dialog extends Widget {
 						try { // to load the ontology
 							if (fileInput.filePath == null)
 								throw Error("No file provided.");
-							new OwlImporter(layer.viewport.app.data.ontology, fileInput.fileData);
+							let data = fileInput.fileData;
+							switch (fileType.selectedOption) {
+								case "JSON":
+									JsonImporter.import(root, data);
+									break;
+								case "OWL":
+									OwlImporter.import(root, data);
+									break;
+							}
 						}
 						catch (e) {
 							console.error(e);
@@ -128,7 +140,7 @@ export class Dialog extends Widget {
 					}]),
 			], new Background("ImportBackground", layer));
 			case "Export": return new Dialog("Export", layer, "Export File...", [
-				new Selector("FileType", null, "File Type: ", ["OWL", "SCHEMA.JSON", "SQL"]),
+				new Selector("FileType", null, "File Type: ", ["JSON", "OWL", "SCHEMA.JSON", "SQL",]),
 			], [
 				new Button("Cancel", null, "Cancel"),
 				new Button("Export", null, "Export", [(button) => {
@@ -138,9 +150,11 @@ export class Dialog extends Widget {
 						let ontology = layer.viewport.app.data.ontology;
 						let data = "";
 						switch (fileType.selectedOption) {
+							case "JSON":
+								data = JsonExporter.export(ontology);
+								break;
 							case "OWL":
 								data = OwlExporter.export(ontology);
-
 								break;
 							case "SCHEMA.JSON":
 								data = JsonSchemaExporter.export(ontology);

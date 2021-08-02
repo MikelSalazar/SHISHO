@@ -1,6 +1,12 @@
 {
 	"$schema": "../../../docs/schema/shisho.schema.json",
 	"SHISHO": "0.4",
-	"name": "Test"
-	
+	"name": "Basic Ontology",
+	"description": "Basic Ontology",
+	"ontology": {
+		"classes": [
+			
+			{ "name" : "Class1", "positions": [[500, 500]]}
+		]
+	}
 }

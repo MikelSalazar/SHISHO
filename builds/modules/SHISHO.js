@@ -21,24 +21,29 @@ export class SHISHO {
 		SHISHO.instances.push(this);
 
 		// Create an empty ontology
-		this._data = new Root({ name: "unnamed_ontology" });
+		this._data = new Root();
 
 		// Create a new viewport
 		this.viewports.push(new Viewport(this, params));
 
+		// Check if there is a data element to analyze
+		if (params.dataElement) {
+			this._dataElement = document.getElementById(params.dataElement);
+		}
+		else
+			this._dataElement = document.getElementById(iS + "Data");
+
 		// Get the data from the parameters
 		if (params.data) {
-			if (typeof params.dataElement === 'string') {
+			if (typeof params.data === 'string') {
 				this._dataElement = document.getElementById(params.dataElement);
 				if (!this._dataElement)
 					throw new Error("Invalid data element");
 			}
-			else
-				this._dataElement = params.dataElement;
+
+			// Try to deserialize the given data
+			this.deserialize(params.data);
 		}
-		else
-			this._dataElement = document.getElementById(iS + "Data");
-		this.deserialize(params.data);
 
 		// Show a message on console
 		console.log(SHISHO.AppName + " " + SHISHO.AppVersion + " Initialized");
@@ -74,12 +79,6 @@ export class SHISHO {
 	/** Loads the SHISHO data.
 	 * @param data The data to load. */
 	deserialize(data) {
-
-		// If there is no data, try to get it from other sources
-		if (!data) {
-			if (this._dataElement)
-				data = this._dataElement.textContent;
-		}
 
 		// Analyze the data
 		try {

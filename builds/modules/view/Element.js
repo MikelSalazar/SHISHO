@@ -1,4 +1,4 @@
-import { Vector } from "../data/model/Vector.js";
+import { Vector } from "../data/types/Vector.js";
 import { Style } from "../data/model/Style.js";
 import { SHISHO } from "../SHISHO.js";
 

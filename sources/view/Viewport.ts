@@ -29,6 +29,11 @@ export class Viewport {
 	/** The time since the last update. */
 	private _deltaTime: number;
 
+	/** */
+	private _DrawTime: number = 1;
+
+	private _lastDrawTime: number;
+
 	/** The locale of the viewport. */
 	// private _locale: Locale;
 
@@ -71,7 +76,7 @@ export class Viewport {
 		this._parentElement = params.parentElement || document.body;
 		let instanceNumber = SHISHO.instances.length;
 
-		// Ceate the CSS styles if 
+		// Create the CSS styles if they don't exist
 		if (instanceNumber == 1) {
 			createCssRule(".ShishoViewport", "position: relative;" +
 				"width: 100%; height: 100%; margin:0; overflow: hidden;");

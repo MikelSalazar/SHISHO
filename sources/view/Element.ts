@@ -1,4 +1,4 @@
-import { Vector } from "../data/model/Vector";
+import { Vector } from "../data/types/Vector";
 import { Style } from "../data/model/Style";
 import { SHISHO } from "../SHISHO";
 import { Shape } from "./Shape";

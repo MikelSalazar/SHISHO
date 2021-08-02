@@ -8,7 +8,7 @@ export class Style extends Node {
 
 	/** Initializes a new Style instance.
 	 * @param data The initialization data. */
-	constructor(data = {}) { super(data); }
+	constructor(data = null) { super(data); }
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
@@ -89,11 +89,13 @@ export class Style extends Node {
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data) {
+	/** Deserializes the Style instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data = {}, combine = true) {
 
 		// Save the name and the parent of the instance
+		// if (!data.name) throw Error("Style without name");
 		this._name = data.name;
 		this._parent = data.parent;
 		this._children = [];

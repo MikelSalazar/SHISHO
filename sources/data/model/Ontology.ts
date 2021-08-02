@@ -7,16 +7,10 @@ export class Ontology extends Node {
 
 	// ---------------------------------------------------------- PUBLIC FIELDS
 
-	/** The name of the ontology. */
-	name: string;
-
-	/** The description of the ontology. */
-	description: string;
-
 	/** The classes of the ontology. */
 	classes: Record<string, Class> = {};
 
-	/** The realtions of the classes. */
+	/** The relations between classes. */
 	relations: Record<string, Relation> = {};
 
 
@@ -24,25 +18,41 @@ export class Ontology extends Node {
 
 	/** Initializes a new instance of the Ontology class.
 	 * @param data The initialization data. */
-	constructor(data: any = {}) { super(data); }
+	constructor(data: any = null) { super(data); }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data: any = {}) {
-		// if (!data.name) throw Error("Ontology without name");
-		this.name = data.name; this.description = data.description || "";
-		this.classes = {};
-		if (data.classes) data.classes.forEach(classData => {
-			if (!classData.name) throw Error("Class without name");
-			this.classes[classData.name] = new Class(classData);
-		});
-		this.relations = {};
-		if (data.relations) data.relations.forEach(relationData => {
-			if (!relationData.name) throw Error("Relation without name");
-			this.relations[relationData.name] = new Relation(relationData);
-		});
+	/** Deserializes the Ontology instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	 deserialize(data: any = {}, combine = true) {
+
+		// If we combine the ontology
+		if (!combine) { this.classes = {}; this.relations = {}; }
+
+		// Parse the classes
+		if (data.classes) {
+			let classIds = Object.keys(data.classes);
+			classIds.forEach( classId => {
+				let classData = data.classes[classId];
+				if (!classId) throw Error ("Class without name.");
+				if (!this.classes[classId]) this.classes[classId] = new Class();
+				this.classes[classId].deserialize(classData, combine);
+			});
+		}
+
+		// Parse the relations
+		if (data.relations) {
+			let relationIds = Object.keys(data.relations);
+			relationIds.forEach( relationId => {
+				let relationData = data.relations[relationId];
+				if (!relationId) throw Error ("Class without name.");
+				if (!this.relations[relationId]) 
+					this.relations[relationId] = new Relation();
+				this.relations[relationId].deserialize(relationData, combine);
+			});
+		}
+
 	}
 }

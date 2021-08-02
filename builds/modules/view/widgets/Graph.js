@@ -1,4 +1,4 @@
-import { Vector } from "../../data/model/Vector.js";
+import { Vector } from "../../data/types/Vector.js";
 import { Element } from "../Element.js";
 import { Style } from "../../data/model/Style.js";
 import { createElement } from "../Viewport.js";
@@ -55,7 +55,8 @@ export class Graph extends Widget {
 
 		// Get the ontology data
 		let o = this.parent.viewport.app.data.ontology;
-
+		if (!o)
+			return;
 
 		ctx.fillStyle = 'black';
 		ctx.font = "16px Arial";

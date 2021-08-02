@@ -8,14 +8,15 @@ export class Relation extends Node {
 
 	/** Initializes a new Relation instance.
 	 * @param data The initialization data. */
-	constructor(data = {}) { super(data); }
+	constructor(data = null) { super(data); }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data) {
+	/** Deserializes the Relation instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data = {}, combine = true) {
 		if (!data.name)
 			throw Error("Relation without name");
 		this.name = data.name;

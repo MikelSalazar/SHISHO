@@ -1,18 +1,19 @@
-import { Class } from "../model/Class";
+import { Root } from "../model/Root";
 import { Ontology } from "../model/Ontology";
+import { Class } from "../model/Class";
 import { Relation } from "../model/Relation";
-import { Vector } from "../model/Vector";
+import { Vector } from "../types/Vector";
 
-/** Manages the importain of ontologies from OWL files. */
+/** Manages the importation of ontologies from OWL files. */
 export class OwlImporter {
 
-	// ------------------------------------------------------------ CONSTRUCTOR
+	// --------------------------------------------------------- PUBLIC METHODS
 
 	/** Imports the data from a OWL file
-	 * @param ontology The ontology to import data to.
-	 * @param data The data of the ontology.
-	 * @param replace Whether to replace (default) or append the new data). */
-	constructor(ontology: Ontology, data: string, replace: boolean = true) {
+	 * @param root The root of the SHISHO data model.
+	 * @param data The JSON file data.
+	 * @param combine Whether to combine (default) or append the new data). */
+	 static import(root:Root, data: string, combine = true) {
 
 		// Parse the data string
 		let parser = new DOMParser();
@@ -24,9 +25,11 @@ export class OwlImporter {
 			if (element.nodeName == "rdf:RDF") mainNode = element;
 		if (!mainNode) throw new Error("Invalid OWL File. ");
 
+		// Operate in the ontology
+		let ontology: Ontology = root.ontology;
 
 		// Clean the previous ontology data
-		if (replace) ontology.deserialize();
+		if (!combine) ontology.deserialize();
 
 		// Extract the useful data
 		for (let element of mainNode.children) {
@@ -102,9 +105,8 @@ export class OwlImporter {
 	}
 
 
-	// --------------------------------------------------------- PUBLIC METHODS
 
-	getName(element: Element) {
+	static getName(element: Element) {
 		let name, className = null;
 		for (let attribute of element.attributes) {
 			switch (attribute.name.toLowerCase()) {
@@ -115,11 +117,11 @@ export class OwlImporter {
 		return name;
 	}
 
-	extractName(node: Node) { return node.textContent.split('#')[1]; }
+	static extractName(node: Node) { return node.textContent.split('#')[1]; }
 
 
 	/** Looks recursively for an element with a particular name  */
-	findElement(name, start: Element): Element {
+	static findElement(name, start: Element): Element {
 		let elements = [start];
 		while (elements.length > 0) { // Depth first search
 			let element = elements.pop();

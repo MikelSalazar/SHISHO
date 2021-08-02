@@ -12,7 +12,7 @@ export class Shape {
 	/** The SVG path of the shape. */
 	private _path: Path2D;
 
-	/** The subshapes of the shape. */
+	/** The sub-shapes of the shape. */
 	private _children: Shape[];
 
 	/** The color of the shape. */

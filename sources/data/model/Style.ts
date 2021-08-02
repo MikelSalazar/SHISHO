@@ -146,16 +146,18 @@ export class Style extends Node {
 
 	/** Initializes a new Style instance.
 	 * @param data The initialization data. */
-	constructor(data: any = {}) { super(data); }
+	constructor(data: any = null) { super(data); }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data: any) {
+	/** Deserializes the Style instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data: any = {}, combine = true) {
 
 		// Save the name and the parent of the instance
+		// if (!data.name) throw Error("Style without name");
 		this._name = data.name;
 		this._parent = data.parent;
 		this._children = [];
@@ -196,7 +198,7 @@ export class Style extends Node {
 	
 	/** Combines multiple styles into one.
 	 * @param styles The styles to combine. */
-	 static combine(styles: Style[]) {
+	static combine(styles: Style[]) {
 		if (!styles || styles.length == 0) throw Error ("No styles to combine");
 		if (styles.length == 1) return styles[0];
 		let combination = styles[0];
