@@ -18,7 +18,7 @@ export class JsonSchemaExporter {
 		// Create the classes
 		for (let classID in ontology.classes) {
 			let c = ontology.classes[classID];
-			let p = schema.properties[c.name] = {};
+			let p = schema.properties[c.name.value] = {};
 			p.type = "object";
 			p.description = c.description;
 		}

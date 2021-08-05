@@ -1,0 +1,55 @@
+import { Node } from "../Node.js";
+
+/** Defines a Text Node. */
+export class String extends Node {
+
+	// ------------------------------------------------------------ CONSTRUCTOR
+
+	/** Initializes a new instance of the String class.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
+	 * @param data The initialization data. */
+	constructor(nodeName, nodeParent, data = {}) {
+		// Call the base class constructor
+		super(nodeName || "string", nodeParent, data);
+
+		// Initialize the value
+		this._value = undefined;
+
+		// Deserialize the initialization data
+		if (data != undefined)
+			this.deserialize(data);
+	}
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The value of the String. */
+	get value() { return this._value; }
+	set value(value) {
+		// Ift he value is different, mark the node for update
+		if (this.value != value)
+			this.nodeUpdated = false;
+
+		// Set the new value
+		this._value = value;
+	}
+
+
+	// --------------------------------------------------------- PUBLIC METHODS
+
+	/** Serializes the instance.
+	 * @return The serialized data. */
+	serialize() { return this._value; }
+
+
+	/** Deserializes the instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data, combine = true) {
+		if (data == null)
+			this.value = null;
+		else if (typeof data == "string")
+			this.value = data;
+	}
+}
+

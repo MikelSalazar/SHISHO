@@ -204,7 +204,11 @@ export class Dialog extends Widget {
 
 				}]),
 				], new Background("ImportBackground", layer));
-			case "Error": return new Dialog("Error", layer, title, 
+		case "Info": return new Dialog("Info", layer, title, 
+				[new Text("ErrorMessage", null, message)],
+				[new Button("OK", null, "OK")], 
+			new Background("ErrorBackground", layer));
+		case "Error": return new Dialog("Error", layer, title, 
 					[new Text("ErrorMessage", null, message)],
 					[new Button("OK", null, "OK")], 
 				new Background("ErrorBackground", layer));

@@ -1,6 +1,5 @@
 import { Root } from "./data/model/Root.js";
 import { Viewport } from "./view/Viewport.js";
-import { Dialog } from "./view/widgets/Dialog.js";
 
 /** Defines the main class of the SHISHO Knowledge Management System. */
 export class SHISHO {
@@ -23,8 +22,25 @@ export class SHISHO {
 		// Create an empty ontology
 		this._data = new Root();
 
+		// DEBUG 
+		// let style = new Style("test", null, {
+		// 	name: "test", shape: "circle",
+		// 	color: [0, 128, 255],
+		// 	radius: 128, iconColor: [255, 255, 255], iconSize: 160
+		// });
+		// console.log(style.serialize());
+		// return;
+
+		// if (params.data) {
+		// 	this._data.deserialize(params.data);
+		// 	console.log(this._data.serialize());
+		// 	console.log(JSON.stringify(this._data.serialize(),null, '\t'));
+		// 	return;
+		// }
+
+
 		// Create a new viewport
-		this.viewports.push(new Viewport(this, params));
+		this._viewports.push(new Viewport(this, params));
 
 		// Check if there is a data element to analyze
 		if (params.dataElement) {
@@ -44,6 +60,8 @@ export class SHISHO {
 			// Try to deserialize the given data
 			this.deserialize(params.data);
 		}
+
+
 
 		// Show a message on console
 		console.log(SHISHO.AppName + " " + SHISHO.AppVersion + " Initialized");
@@ -96,7 +114,8 @@ export class SHISHO {
 
 		}
 		catch (e) {
-			Dialog.create("Error", this._viewports[0].layers.dialog, "Error", "Unable to load data.<br>" + e.message);
+			// Dialog.create("Error", this._viewports[0].layers.dialog, "Error", 
+			// 	"Unable to load data.<br>" + e.message);
 			return false;
 		}
 	}

@@ -1,15 +1,18 @@
 /** Defines a visual Shape. */
 export class Shape {
 
-
 	// ------------------------------------------------------------ CONSTRUCTOR
 
 	/** Initializes a new Shape instance.
 	 * @param data The initialization data. */
 	constructor(data = {}) {
+		this._x = data.x || 0;
+		this._y = data.y || 0;
 		this._width = data.width || 0;
 		this._height = data.height || 0;
 		this._path = new Path2D(data.path);
+		this._text = data.text;
+		this._font = data.font;
 		this._color = data.color;
 		this._borderColor = data.borderColor;
 		this._borderWidth = data.borderWidth;
@@ -20,6 +23,12 @@ export class Shape {
 
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The width of the shape. */
+	get x() { return this._x; }
+
+	/** The height of the shape. */
+	get y() { return this._y; }
 
 	/** The width of the shape. */
 	get width() { return this._width; }
@@ -39,6 +48,9 @@ export class Shape {
 	/** The width of the border. */
 	get borderWidth() { return this._borderWidth; }
 
+	/** The sub-shapes of the shape. */
+	get children() { return this._children; }
+
 
 	// --------------------------------------------------------- PUBLIC METHODS
 	/** Draws the shape.
@@ -47,6 +59,10 @@ export class Shape {
 
 		// Save the current state
 		ctx.save();
+
+		ctx.translate(this._x, this.y);
+		if (position)
+			ctx.translate(position.x, position.y);
 
 		// If there is a size, calculate the scale
 		if (size) {
@@ -58,13 +74,7 @@ export class Shape {
 
 			// Scale the object
 			ctx.scale(scale, scale);
-
-			// Position the the shape
-			if (position)
-				ctx.translate(position.x / scale, position.y / scale);
 		}
-		else if (position)
-			ctx.translate(position.x, position.y);
 
 
 		// Draw the path
@@ -80,6 +90,15 @@ export class Shape {
 				ctx.strokeStyle = this._borderColor;
 				ctx.stroke();
 			}
+		}
+
+		// Draw the text
+		if (this._text) {
+
+			// if (this._font) ctx.1
+			// Draw the path
+			ctx.fillStyle = this._color;
+			ctx.fillText(this._text, 0, 0);
 		}
 
 		// Draw the subshapes

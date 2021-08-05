@@ -1,23 +1,50 @@
 import { Node } from "../Node.js";
+import { NodeSet } from "../NodeSet.js";
+import { String } from "../types/String.js";
 import { Ontology } from "./Ontology.js";
 import { Style } from "./Style.js";
 
-/** Defines the Root of a SHISHO data model. */
+/** Defines the Root of a SHISHO knowledge base. */
 export class Root extends Node {
+
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
-	/** Initializes a new instance of the Ontology class.
+	/** Initializes a new Root instance.
 	 * @param data The initialization data. */
-	constructor(data = null) {
-		super(data);
+	constructor(data) {
+		// Call the base class constructor
+		super("root", null, data);
 
-		/** The ontology data. */
-		this.ontology = new Ontology();
+		// Initialize the child nodes
+		this._name = new String("name", this);
+		this._description = new String("description", this);
+		this._author = new String("author", this);
+		this._ontology = new Ontology("ontology", this);
+		this._styles = new NodeSet("styles", this, Style);
 
-		/** The graphical styles. */
-		this.styles = {};
+		// Deserialize the initialization data
+		if (data != undefined)
+			this.deserialize(data);
 	}
+
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The name of the Root. */
+	get name() { return this._name; }
+
+	/** The description of the Root. */
+	get description() { return this._description; }
+
+	/** The author of the Root. */
+	get author() { return this._author; }
+
+	/** The ontology of the Root. */
+	get ontology() { return this._ontology; }
+
+	/** The styles of the Root. */
+	get styles() { return this._styles; }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
@@ -27,32 +54,16 @@ export class Root extends Node {
 	 * @combine Whether to combine with or to replace the previous data. */
 	deserialize(data = {}, combine = true) {
 
-		// Check if we have to clean the data (when not combining)
-		if (!this.name || !combine)
-			this.name = data.name || "Untitled";
-		if (!this.description || !combine)
-			this.description = data.description;
-		if (!combine)
-			this.ontology = new Ontology();
-		this.styles = {};
-
-		// Deserialize the ontology data
+		// Deserialize the properties of the class
+		if (data.name)
+			this._name.deserialize(data.name);
+		else
+			throw Error("Knowledge base without name.");
+		if (data.description)
+			this._description.deserialize(data.description);
 		if (data.ontology)
-			this.ontology.deserialize(data.ontology, combine);
-
-		// Deserialize the graphical styles
+			this._ontology.deserialize(data.ontology, combine);
 		if (data.styles)
-			data.styles.forEach(styleData => {
-				let styleName = styleData.name;
-				if (!styleName)
-					throw Error("Style without name.");
-				if (!this.styles[styleName])
-					this.styles[styleName] = new Style();
-				this.styles[styleName].deserialize(styleData, combine);
-			});
-
-		// If the name is null or undefined, give it a valid value
-		if (!this.name)
-			this.name = "Untitled Document";
+			this.styles.deserialize(data.ontology, combine);
 	}
 }

@@ -1,6 +1,7 @@
 import { Vector } from "../data/types/Vector.js";
 import { Style } from "../data/model/Style.js";
 import { SHISHO } from "../SHISHO.js";
+import { Shape } from "./Shape.js";
 
 /** Defines a visual Element. */
 export class Element {
@@ -53,18 +54,41 @@ export class Element {
 	/** Draws the visual element. */
 	draw(ctx) {
 
-		// Save the current state
-		ctx.save();
-
+		// Get the style to apply
 		let s = Style.combine(this._styles);
 		let p = this._position;
 
+		// Save the current state
+		ctx.save();
+
+		// Calculate the size of the text
+		let textShapes = [], textWidth = 0, textHeight = 0;
+		if (this._text && s.textFont) {
+			ctx.font = s.textSize.get() + " " + s.textFont.value;
+			let lines = this._text.split('\n'), lineCount = lines.length, lineHeight = s.textSize.get(), lineSep = lineHeight * 0.5;
+			textHeight = lineHeight * lineCount;
+
+
+			for (let lineIndex = 0; lineIndex < lineCount; lineIndex++) {
+				let line = lines[lineIndex];
+				let m = ctx.measureText(line);
+				if (textWidth < m.width)
+					textWidth = m.width;
+
+				textShapes.push(new Shape({
+					text: line, x: 0, y: (lineHeight * lineIndex) - textHeight / 2 + lineHeight / 2
+				}));
+			}
+		}
+
+
+		// Create the background shape
 		ctx.beginPath();
-		switch (s.shape) {
+		switch (s.shape.value) {
 			case "circle":
 				if (s.radius == undefined)
 					throw Error("No radius defined");
-				let r = parseFloat(s.radius);
+				let r = s.radius.get();
 				ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
 				break;
 			case "rectangle":
@@ -72,37 +96,47 @@ export class Element {
 			// default: throw Error("Invalid element Type"); break;
 		}
 
+		// Create the background shape
+
 		if (s.color) {
-			ctx.fillStyle = s.color;
+			ctx.fillStyle = s.color.get();
 			ctx.fill();
 		}
 		if (s.borderColor && s.borderWidth) {
-			ctx.lineWidth = parseFloat(s.borderWidth);
-			ctx.strokeStyle = s.borderColor;
+			ctx.lineWidth = s.borderWidth.get();
+			ctx.strokeStyle = s.borderColor.get();
 			ctx.stroke();
 		}
-		if (this._text && s.textColor && s.textFont) {
-			ctx.textAlign = "center";
-			ctx.textBaseline = "middle";
-			ctx.fillStyle = s.textColor;
-			ctx.font = s.textSize + " " + s.textFont;
-			ctx.fillText(this._text, p.x, p.y);
-		}
+
+
+		// Draw the icon
 		if (this._icon) {
+			// console.log(s.serialize());
 			if (s.iconColor)
-				ctx.fillStyle = s.iconColor;
+				ctx.fillStyle = s.iconColor.get();
 			if (s.iconOffsetX)
-				ctx.translate(parseFloat(s.iconOffsetX), 0);
+				ctx.translate(s.iconOffsetX.get(), 0);
 			if (s.iconOffsetY)
-				ctx.translate(0, parseFloat(s.iconOffsetY));
+				ctx.translate(0, s.iconOffsetY.get());
 			if (SHISHO.resources[this._icon]) {
-				SHISHO.resources[this._icon].draw(ctx, p, parseFloat(s.iconSize));
+				SHISHO.resources[this._icon].draw(ctx, p, s.iconSize.get());
 			}
 			else
 				throw Error("Unknow Icon: " + this._icon);
 		}
 
-		// Restore the previous  state
+		// Draw the texts
+		for (const textShape of textShapes) {
+			if (s.textColor)
+				ctx.fillStyle = s.textColor.get();
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			textShape.draw(ctx, p);
+		}
+
+
+
+		// Restore the previous state
 		ctx.restore();
 	}
 

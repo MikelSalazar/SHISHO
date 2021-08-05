@@ -46,14 +46,14 @@ export class OwlImporter {
 					// Create the class definition
 					let newClass, className = this.getName(element);
 					if (className)
-						newClass = new Class({ name: className });
+						newClass = new Class("className", ontology, { name: className });
 					else
 						throw Error("Class name not defined");
 
 					// Check if there is a class defining the position
 					let x = this.findElement('entityPositionX', element);
 					let y = this.findElement('entityPositionY', element);
-					newClass.positions = [new Vector({
+					newClass.positions = [new Vector("position", newClass, {
 							x: (x) ? parseFloat(x.textContent) : 0,
 							y: (y) ? parseFloat(y.textContent) : 0
 						})];
@@ -86,7 +86,7 @@ export class OwlImporter {
 					let target = this.findElement('range', element);
 					let originName = this.extractName(origin.attributes[0]);
 					let targetName = this.extractName(target.attributes[0]);
-					newProperty = new Relation({ name: propertyName,
+					newProperty = new Relation(propertyName, ontology, { name: propertyName,
 						origin: originName, target: targetName });
 					ontology.relations[propertyName] = newProperty;
 					console.log("Relation:" + propertyName);
@@ -97,10 +97,10 @@ export class OwlImporter {
 		// Check the relations
 		Object.keys(ontology.relations).forEach(relationName => {
 			let relation = ontology.relations[relationName];
-			if (!ontology.classes[relation.origin])
+			if (!ontology.classes[relation.origin.value])
 				throw Error("Class not defined: '" + relation.origin +
 					"' in relation '" + relationName + "'");
-			if (!ontology.classes[relation.target])
+			if (!ontology.classes[relation.target.value])
 				throw Error("Class not defined: '" + relation.target +
 					"' in relation '" + relationName + "'");
 

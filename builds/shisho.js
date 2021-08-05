@@ -1,7 +1,6 @@
 
 
 
-
 /** Defines the main class of the SHISHO Knowledge Management System. */
 class SHISHO {
 
@@ -23,8 +22,25 @@ class SHISHO {
 		// Create an empty ontology
 		this._data = new Root();
 
+		// DEBUG 
+		// let style = new Style("test", null, {
+		// 	name: "test", shape: "circle",
+		// 	color: [0, 128, 255],
+		// 	radius: 128, iconColor: [255, 255, 255], iconSize: 160
+		// });
+		// console.log(style.serialize());
+		// return;
+
+		// if (params.data) {
+		// 	this._data.deserialize(params.data);
+		// 	console.log(this._data.serialize());
+		// 	console.log(JSON.stringify(this._data.serialize(),null, '\t'));
+		// 	return;
+		// }
+
+
 		// Create a new viewport
-		this.viewports.push(new Viewport(this, params));
+		this._viewports.push(new Viewport(this, params));
 
 		// Check if there is a data element to analyze
 		if (params.dataElement) {
@@ -44,6 +60,8 @@ class SHISHO {
 			// Try to deserialize the given data
 			this.deserialize(params.data);
 		}
+
+
 
 		// Show a message on console
 		console.log(SHISHO.AppName + " " + SHISHO.AppVersion + " Initialized");
@@ -96,7 +114,8 @@ class SHISHO {
 
 		}
 		catch (e) {
-			Dialog.create("Error", this._viewports[0].layers.dialog, "Error", "Unable to load data.<br>" + e.message);
+			// Dialog.create("Error", this._viewports[0].layers.dialog, "Error", 
+			// 	"Unable to load data.<br>" + e.message);
 			return false;
 		}
 	}
@@ -194,7 +213,7 @@ class JsonSchemaExporter {
 		// Create the classes
 		for (let classID in ontology.classes) {
 			let c = ontology.classes[classID];
-			let p = schema.properties[c.name] = {};
+			let p = schema.properties[c.name.value] = {};
 			p.type = "object";
 			p.description = c.description;
 		}
@@ -339,14 +358,14 @@ class OwlImporter {
 					// Create the class definition
 					let newClass, className = this.getName(element);
 					if (className)
-						newClass = new Class({ name: className });
+						newClass = new Class("className", ontology, { name: className });
 					else
 						throw Error("Class name not defined");
 
 					// Check if there is a class defining the position
 					let x = this.findElement('entityPositionX', element);
 					let y = this.findElement('entityPositionY', element);
-					newClass.positions = [new Vector({
+					newClass.positions = [new Vector("position", newClass, {
 							x: (x) ? parseFloat(x.textContent) : 0,
 							y: (y) ? parseFloat(y.textContent) : 0
 						})];
@@ -379,7 +398,7 @@ class OwlImporter {
 					let target = this.findElement('range', element);
 					let originName = this.extractName(origin.attributes[0]);
 					let targetName = this.extractName(target.attributes[0]);
-					newProperty = new Relation({ name: propertyName,
+					newProperty = new Relation(propertyName, ontology, { name: propertyName,
 						origin: originName, target: targetName });
 					ontology.relations[propertyName] = newProperty;
 					console.log("Relation:" + propertyName);
@@ -390,10 +409,10 @@ class OwlImporter {
 		// Check the relations
 		Object.keys(ontology.relations).forEach(relationName => {
 			let relation = ontology.relations[relationName];
-			if (!ontology.classes[relation.origin])
+			if (!ontology.classes[relation.origin.value])
 				throw Error("Class not defined: '" + relation.origin +
 					"' in relation '" + relationName + "'");
-			if (!ontology.classes[relation.target])
+			if (!ontology.classes[relation.target.value])
 				throw Error("Class not defined: '" + relation.target +
 					"' in relation '" + relationName + "'");
 
@@ -431,25 +450,79 @@ class OwlImporter {
 	}
 }
 
-/** Defines a data node. */
+/** Defines a data Node. */
 class Node {
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
 	/** Initializes a new Node instance.
-	 * @param data The data of the Node. */
-	constructor(data = null) { if (data)
-		this.deserialize(data, false); }
+	 * @param name The name of the Node.
+	 * @param parent The parent Node.
+	 * @param data The initialization data. */
+	constructor(name, parent, data = null) {
+
+		// Initialize the data of the node
+		this._nodeName = name || "node";
+		this._nodeParent = parent;
+		this._nodeChildren = [];
+		this._nodeUpdated = false;
+
+		// Create a link between the node and its parent
+		if (parent)
+			parent._nodeChildren.push(this);
+	}
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The name of the Node. */
+	get nodeName() { return this._nodeName; }
+
+	/** The parent Node. */
+	get nodeParent() { return this._nodeParent; }
+
+	/** The children Nodes. */
+	get nodeChildren() { return this._nodeChildren; }
+
+	/** Indicates if the Node has been updated or not. */
+	get nodeUpdated() { return this._nodeUpdated; }
+	set nodeUpdated(value) {
+
+		// Propagate "true" values downwards in the node hierarchy
+		if (value)
+			this._nodeChildren.forEach(c => { c.nodeUpdated = true; });
+
+		// Otherwise, propagate "false" values updwards in the node hierarchy
+		else if (this._nodeParent)
+			this._nodeParent.nodeUpdated = false;
+
+		// Apply the value
+		this._nodeUpdated = value;
+	}
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Serializes the instance.
-	 * @return The JSON representation of the instance. */
-	serialize() { return JSON.stringify(this, null, '\t'); }
+
+	/** Serializes the Node instance.
+	 * @return The serialized data. */
+	serialize() {
+
+		// Create an object to serialize the Node
+		let serializedObject = {};
+
+		// Save the data of the children
+		let childIndex = 0, childCount = this._nodeChildren.length;
+		for (childIndex = 0; childIndex < childCount; childIndex++) {
+			let childNode = this._nodeChildren[childIndex];
+			serializedObject[childNode._nodeName] = childNode.serialize();
+		}
+
+		// Return the object with the serializated data
+		return serializedObject;
+	}
 
 
-	/** Deserializes the instance.
+	/** Deserializes the Node instance.
 	 * @data The data to deserialize.
 	 * @combine Whether to combine with or to replace the previous data. */
 	deserialize(data = {}, combine = true) {
@@ -462,6 +535,8 @@ class Node {
 
 
 
+
+
 /** Defines a Class of an Ontology. */
 class Class extends Node {
 
@@ -469,16 +544,38 @@ class Class extends Node {
 	// ------------------------------------------------------------ CONSTRUCTOR
 
 	/** Initializes a new Class instance.
+	 * @param ontology The Ontology the Class instance belongs to.
 	 * @param data The initialization data. */
-	constructor(data = null) {
-		super(data);
+	constructor(nodeName, ontology, data) {
 
-		/** The properties of the class. */
-		this.properties = {};
+		// Call the base class constructor
+		super(nodeName || "class", ontology, data);
 
-		/** The positions of the class. */
-		this.positions = [];
+		// Initialize the child nodes
+		this._name = new String("name", this);
+		this._description = new String("description", this);
+		this._properties = new NodeSet("properties", this, Property);
+		this._positions = new NodeSet("positions", this, Vector);
+
+		// Deserialize the initialization data
+		if (data != undefined)
+			this.deserialize(data);
 	}
+
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The name of the Class. */
+	get name() { return this._name; }
+
+	/** The description of the Class. */
+	get description() { return this._description; }
+
+	/** The properties of the Class. */
+	get properties() { return this._properties; }
+
+	/** The positions of the Class in the different Graph views. */
+	get positions() { return this._positions; }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
@@ -488,32 +585,20 @@ class Class extends Node {
 	 * @combine Whether to combine with or to replace the previous data. */
 	deserialize(data = {}, combine = true) {
 
-		// Check if we have to clean the data (when not combining)
-		if (!combine || !this.name) {
-			this.name = data.name;
-			this.description = data.description;
-			this.properties = {};
-			this.positions = [];
-		}
-
 		// Deserialize the properties of the class
+		if (data.name)
+			this._name.deserialize(data.name);
+		else
+			throw Error("Class without name.");
+		if (data.description)
+			this._description.deserialize(data.description);
 		if (data.properties)
-			data.properties.forEach(propertyData => {
-				let name = propertyData.name;
-				if (!name)
-					throw Error("Property without name.");
-				if (!this.properties[name])
-					this.properties[name] = new Property();
-				this.properties[name].deserialize(propertyData, combine);
-			});
-
-		// Deserialize the positions of the class
+			this._properties.deserialize(data.properties);
 		if (data.positions)
-			data.positions.forEach(positionData => {
-				this.positions.push(new Vector(positionData));
-			});
+			this._positions.deserialize(data.positions);
 	}
 }
+
 
 
 
@@ -525,19 +610,31 @@ class Ontology extends Node {
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
-	/** Initializes a new instance of the Ontology class.
+	/** Initializes a new Ontology instance.
+	 * @param root The root of the SHISHO data model.
 	 * @param data The initialization data. */
-	constructor(data = null) {
-		super(data);
+	constructor(nodeName, root, data) {
 
-		// ---------------------------------------------------------- PUBLIC FIELDS
+		// Call the base class constructor
+		super(nodeName || "ontology", root, data);
 
-		/** The classes of the ontology. */
-		this.classes = {};
+		// Initialize the child nodes
+		this._classes = new NodeSet("classes", this, Class);
+		this._relations = new NodeSet("relation", this, Relation);
 
-		/** The relations between classes. */
-		this.relations = {};
+		// Deserialize the initialization data
+		if (data != undefined)
+			this.deserialize(data);
 	}
+
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The classes of the ontology. */
+	get classes() { return this._classes; }
+
+	/** The relations of the ontology. */
+	get relations() { return this._relations; }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
@@ -546,41 +643,15 @@ class Ontology extends Node {
 	 * @data The data to deserialize.
 	 * @combine Whether to combine with or to replace the previous data. */
 	deserialize(data = {}, combine = true) {
-
-		// If we combine the ontology
-		if (!combine) {
-			this.classes = {};
-			this.relations = {};
-		}
-
-		// Parse the classes
-		if (data.classes) {
-			let classIds = Object.keys(data.classes);
-			classIds.forEach(classId => {
-				let classData = data.classes[classId];
-				if (!classId)
-					throw Error("Class without name.");
-				if (!this.classes[classId])
-					this.classes[classId] = new Class();
-				this.classes[classId].deserialize(classData, combine);
-			});
-		}
-
-		// Parse the relations
-		if (data.relations) {
-			let relationIds = Object.keys(data.relations);
-			relationIds.forEach(relationId => {
-				let relationData = data.relations[relationId];
-				if (!relationId)
-					throw Error("Class without name.");
-				if (!this.relations[relationId])
-					this.relations[relationId] = new Relation();
-				this.relations[relationId].deserialize(relationData, combine);
-			});
-		}
-
+		if (data.classes)
+			this._classes.deserialize(data.classes);
+		if (data.relations)
+			this._relations.deserialize(data.relations);
+		1;
 	}
 }
+
+
 
 
 
@@ -591,8 +662,30 @@ class Property extends Node {
 	// ------------------------------------------------------------ CONSTRUCTOR
 
 	/** Initializes a new Property instance.
+	 * @param parentClass The class the Class instance belongs to.
 	 * @param data The initialization data. */
-	constructor(data = null) { super(data); }
+	constructor(nodeName, parentClass, data) {
+
+		// Call the base class constructor
+		super(nodeName || "property", parentClass, data);
+
+		// Initialize the child nodes
+		this._name = new String("name", this);
+		this._description = new String("description", this);
+
+		// Deserialize the initialization data
+		if (data != undefined)
+			this.deserialize(data);
+	}
+
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The name of the Property. */
+	get name() { return this._name; }
+
+	/** The description of the Property. */
+	get description() { return this._description; }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
@@ -601,12 +694,17 @@ class Property extends Node {
 	 * @data The data to deserialize.
 	 * @combine Whether to combine with or to replace the previous data. */
 	deserialize(data = {}, combine = true) {
-		if (!data.name)
-			throw Error("Property without name");
-		this.name = data.name;
-		this.description = data.description;
+
+		// Deserialize the properties of the class
+		if (data.name)
+			this._name.deserialize(data.name);
+		else
+			throw Error("Property without name.");
+		if (data.description)
+			this._description.deserialize(data.description);
 	}
 }
+
 
 
 
@@ -614,12 +712,42 @@ class Property extends Node {
 class Relation extends Node {
 
 
+
 	// ------------------------------------------------------------ CONSTRUCTOR
 
 	/** Initializes a new Relation instance.
+	 * @param ontology The Ontology the Relation instance belongs to.
 	 * @param data The initialization data. */
-	constructor(data = null) { super(data); }
+	constructor(nodeName, ontology, data) {
 
+		// Call the base class constructor
+		super(nodeName || "relation", ontology, data);
+
+		// Initialize the child nodes
+		this._name = new String("name", this);
+		this._description = new String("description", this);
+		this._origin = new String("origin", this);
+		this._target = new String("target", this);
+
+		// Deserialize the initialization data
+		if (data != undefined)
+			this.deserialize(data);
+	}
+
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The name of the Class. */
+	get name() { return this._name; }
+
+	/** The description of the Class. */
+	get description() { return this._description; }
+
+	/** The origin Class of the Relation. */
+	get origin() { return this._origin; }
+
+	/** The target Class of the Relation. */
+	get target() { return this._target; }
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
@@ -627,12 +755,20 @@ class Relation extends Node {
 	 * @data The data to deserialize.
 	 * @combine Whether to combine with or to replace the previous data. */
 	deserialize(data = {}, combine = true) {
-		if (!data.name)
-			throw Error("Relation without name");
-		this.name = data.name;
-		this.description = data.description;
-		this.origin = data.origin;
-		this.target = data.target;
+		if (data.name)
+			this._name.deserialize(data.name);
+		else
+			throw Error("Relation without name.");
+		if (data.description)
+			this._description.deserialize(data.description);
+		if (data.origin)
+			this._origin.deserialize(data.origin);
+		else
+			throw Error("Relation without origin (" + data.name + ").");
+		if (data.target)
+			this._target.deserialize(data.target);
+		else
+			throw Error("Relation without target (" + data.name + ").");
 	}
 }
 
@@ -640,22 +776,49 @@ class Relation extends Node {
 
 
 
-/** Defines the Root of a SHISHO data model. */
+
+
+/** Defines the Root of a SHISHO knowledge base. */
 class Root extends Node {
+
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
-	/** Initializes a new instance of the Ontology class.
+	/** Initializes a new Root instance.
 	 * @param data The initialization data. */
-	constructor(data = null) {
-		super(data);
+	constructor(data) {
+		// Call the base class constructor
+		super("root", null, data);
 
-		/** The ontology data. */
-		this.ontology = new Ontology();
+		// Initialize the child nodes
+		this._name = new String("name", this);
+		this._description = new String("description", this);
+		this._author = new String("author", this);
+		this._ontology = new Ontology("ontology", this);
+		this._styles = new NodeSet("styles", this, Style);
 
-		/** The graphical styles. */
-		this.styles = {};
+		// Deserialize the initialization data
+		if (data != undefined)
+			this.deserialize(data);
 	}
+
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The name of the Root. */
+	get name() { return this._name; }
+
+	/** The description of the Root. */
+	get description() { return this._description; }
+
+	/** The author of the Root. */
+	get author() { return this._author; }
+
+	/** The ontology of the Root. */
+	get ontology() { return this._ontology; }
+
+	/** The styles of the Root. */
+	get styles() { return this._styles; }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
@@ -665,35 +828,22 @@ class Root extends Node {
 	 * @combine Whether to combine with or to replace the previous data. */
 	deserialize(data = {}, combine = true) {
 
-		// Check if we have to clean the data (when not combining)
-		if (!this.name || !combine)
-			this.name = data.name || "Untitled";
-		if (!this.description || !combine)
-			this.description = data.description;
-		if (!combine)
-			this.ontology = new Ontology();
-		this.styles = {};
-
-		// Deserialize the ontology data
+		// Deserialize the properties of the class
+		if (data.name)
+			this._name.deserialize(data.name);
+		else
+			throw Error("Knowledge base without name.");
+		if (data.description)
+			this._description.deserialize(data.description);
 		if (data.ontology)
-			this.ontology.deserialize(data.ontology, combine);
-
-		// Deserialize the graphical styles
+			this._ontology.deserialize(data.ontology, combine);
 		if (data.styles)
-			data.styles.forEach(styleData => {
-				let styleName = styleData.name;
-				if (!styleName)
-					throw Error("Style without name.");
-				if (!this.styles[styleName])
-					this.styles[styleName] = new Style();
-				this.styles[styleName].deserialize(styleData, combine);
-			});
-
-		// If the name is null or undefined, give it a valid value
-		if (!this.name)
-			this.name = "Untitled Document";
+			this.styles.deserialize(data.ontology, combine);
 	}
 }
+
+
+
 
 
 
@@ -704,8 +854,42 @@ class Style extends Node {
 	// ------------------------------------------------------------ CONSTRUCTOR
 
 	/** Initializes a new Style instance.
+	 * @param root The root of the SHISHO data model.
 	 * @param data The initialization data. */
-	constructor(data = null) { super(data); }
+	constructor(nodeName, root, data) {
+
+		// Call the base class constructor
+		super(nodeName || "style", root, data);
+
+		// Initialize the child nodes
+		this._name = new String("name", this);
+		this._parent = new String("parent", this);
+
+		this._shape = new String("shape", this);
+		this._width = new Measure("width", this);
+		this._height = new Measure("height", this);
+		this._radius = new Measure("radius", this);
+		this._radius2 = new Measure("radius2", this);
+
+		this._color = new Color("color", this);
+		this._borderColor = new Color("border_color", this);
+		this._borderWidth = new Measure("border_width", this);
+
+		this._textFont = new String("text_font", this);
+		this._textSize = new Measure("text_size", this);
+		this._textAlign = new String("text_align", this);
+		this._textColor = new Color("text_color", this);
+
+		this._icon = new String("icon", this);
+		this._iconColor = new Color("icon_color", this);
+		this._iconSize = new Measure("icon_size", this);
+		this._iconOffsetX = new Measure("icon_offset_x", this);
+		this._iconOffsetY = new Measure("icon_offset_y", this);
+
+		// Deserialize the initialization data
+		if (data != undefined)
+			this.deserialize(data);
+	}
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
@@ -716,72 +900,57 @@ class Style extends Node {
 	get parent() { return this._parent; }
 
 	/** The shape of the style. */
-	get shape() { return this.parsePropertyValue('_shape'); }
-	set shape(value) { this._shape = value; }
+	get shape() { return this._shape; }
 
 	/** The width of the shape. */
-	get width() { return this.parsePropertyValue('_width'); }
-	set width(value) { this._width = value; }
+	get width() { return this._width; }
 
 	/** The height of the shape. */
-	get height() { return this.parsePropertyValue('_height'); }
-	set height(value) { this._height = value; }
+	get height() { return this._height; }
 
 	/** The radius of the shape. */
-	get radius() { return this.parsePropertyValue('_radius'); }
-	set radius(value) { this._radius = value; }
+	get radius() { return this._radius; }
 
 	/** The secondary radius of the shape. */
-	get radius2() { return this.parsePropertyValue('_radius2'); }
-	set radius2(value) { this._radius2 = value; }
+	get radius2() { return this._radius2; }
 
 	/** The color of the style. */
-	get color() { return this.parsePropertyValue('_color'); }
+	get color() { return this._color; }
 	set color(value) { this._color = value; }
 
 	/** The color of the border. */
-	get borderColor() { return this.parsePropertyValue('_borderColor'); }
+	get borderColor() { return this._borderColor; }
 	set borderColor(value) { this._borderColor = value; }
 
 	/** The width of the border. */
-	get borderWidth() { return this.parsePropertyValue('_borderWidth'); }
-	set borderWidth(value) { this._borderWidth = value; }
+	get borderWidth() { return this._borderWidth; }
 
 	/** The font of the text. */
-	get textFont() { return this.parsePropertyValue('_textFont'); }
-	set textFont(value) { this._textFont = value; }
+	get textFont() { return this._textFont; }
 
 	/** The size of the text. */
-	get textSize() { return this.parsePropertyValue('_textSize'); }
-	set textSize(value) { this._textSize = value; }
+	get textSize() { return this._textSize; }
 
 	/** The horizontal and vertical alignment of the text. */
-	get textAlign() { return this.parsePropertyValue('_textAlign'); }
-	set textAlign(value) { this._textAlign = value; }
+	get textAlign() { return this._textAlign; }
 
 	/** The color of the text. */
-	get textColor() { return this.parsePropertyValue('_textColor'); }
-	set textColor(value) { this._textColor = value; }
+	get textColor() { return this._textColor; }
 
 	/** The icon of the shape. */
-	get icon() { return this.parsePropertyValue('_icon'); }
-	set icon(value) { this._icon = value; }
+	get icon() { return this._icon; }
 
 	/** The icon color of the style. */
-	get iconColor() { return this.parsePropertyValue('_iconColor'); }
-	set iconColor(value) { this._iconColor = value; }
+	get iconColor() { return this._iconColor; }
 
 	/** The icon size of the style. */
-	get iconSize() { return this.parsePropertyValue('_iconSize'); }
-	set iconSize(value) { this._iconSize = value; }
+	get iconSize() { return this._iconSize; }
 
 	/** The icon offset X of the style. */
-	get iconOffsetX() { return this.parsePropertyValue('_iconOffsetX'); }
-	set iconOffsetX(value) { this._iconOffsetX = value; }
+	get iconOffsetX() { return this._iconOffsetX; }
 
 	/** The icon offset X of the style. */
-	get iconOffsetY() { return this.parsePropertyValue('_iconOffsetY'); }
-	set iconOffsetY(value) { this._iconOffsetY = value; }
+	get iconOffsetY() { return this._iconOffsetY; }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
@@ -791,55 +960,52 @@ class Style extends Node {
 	 * @combine Whether to combine with or to replace the previous data. */
 	deserialize(data = {}, combine = true) {
 
-		// Save the name and the parent of the instance
-		// if (!data.name) throw Error("Style without name");
-		this._name = data.name;
-		this._parent = data.parent;
-		this._children = [];
-		if (this._parent)
-			this._children.push(this.name);
-
-		// Parse the initialization parameters
-		if (data.shape)
-			this.shape = data.shape;
-		if (data.width)
-			this.width = data.width;
-		if (data.height)
-			this.height = data.height;
-		if (data.radius)
-			this.radius = data.radius;
-		if (data.radius2)
-			this.radius2 = data.radius2;
-		if (data.color)
-			this.color = data.color;
-		if (data.borderColor)
-			this.borderColor = data.borderColor;
-		if (data.borderWidth)
-			this.borderWidth = data.borderWidth;
-		if (data.textFont)
-			this.textFont = data.textFont;
-		if (data.textSize)
-			this.textSize = data.textSize;
-		if (data.textAlign)
-			this.textAlign = data.textAlign;
-		if (data.textColor)
-			this.textColor = data.textColor;
-		if (data.icon)
-			this.icon = data.icon;
-		if (data.iconColor)
-			this.iconColor = data.iconColor;
-		if (data.iconSize)
-			this.iconSize = data.iconSize;
-		if (data.iconOffsetX)
-			this.iconOffsetX = data.iconOffsetX;
-		if (data.iconOffsetY)
-			this.iconOffsetY = data.iconOffsetY;
+		// Deserialize the properties of the class
+		if (data.name != undefined)
+			this._name.deserialize(data.shape);
+		if (data.parent != undefined)
+			this._parent.deserialize(data.parent);
+		if (data.shape != undefined)
+			this._shape.deserialize(data.shape);
+		if (data.width != undefined)
+			this._width.deserialize(data.width);
+		if (data.height != undefined)
+			this._height.deserialize(data.height);
+		if (data.radius != undefined)
+			this._radius.deserialize(data.radius);
+		if (data.radius2 != undefined)
+			this._radius2.deserialize(data.radius2);
+		if (data.color != undefined)
+			this._color.deserialize(data.color);
+		if (data.border_color != undefined)
+			this._borderColor.deserialize(data.border_color);
+		if (data.border_width != undefined)
+			this._borderWidth.deserialize(data.border_width);
+		if (data.text_font != undefined)
+			this._textFont.deserialize(data.text_font);
+		if (data.text_size != undefined)
+			this._textSize.deserialize(data.text_size);
+		if (data.text_align != undefined)
+			this._textAlign.deserialize(data.text_align);
+		if (data.text_color != undefined)
+			this._textColor.deserialize(data.text_color);
+		if (data.icon != undefined)
+			this._icon.deserialize(data.icon);
+		if (data.icon_color != undefined)
+			this._iconColor.deserialize(data.icon_color);
+		if (data.icon_size != undefined)
+			this._iconSize.deserialize(data.icon_size);
+		if (data.icon_offset_x != undefined)
+			this._iconOffsetX.deserialize(data.icon_offset_x);
+		if (data.icon_offset_y != undefined)
+			this._iconOffsetY.deserialize(data.icon_offset_y);
 	}
 
 
 	/** Obtains the value of a property.
 	 * @param propertyName The name of the property. */
-	parsePropertyValue(propertyName) {
+	getValue(propertyName) {
+
 		let v = this[propertyName], p = this._parent;
 		// if (v == null && p !== null) return p.parsePropertyValue(propertyName);
 		// if (v.endsWith())
@@ -856,11 +1022,56 @@ class Style extends Node {
 			throw Error("No styles to combine");
 		if (styles.length == 1)
 			return styles[0];
-		let combination = styles[0];
-		styles.forEach(style => { combination.deserialize(style); });
+		let combination = new Style("style", null);
+		for (let styleIndex = 0; styleIndex < styles.length; styleIndex++) {
+			let style = styles[styleIndex];
+			let styleData = style.serialize();
+			// console.log(styleData);
+			combination.deserialize(styleData);
+		}
+		// console.log(combination.serialize());
 		return combination;
 	}
 }
+
+
+
+/** Defines a Node set. */
+class NodeSet extends Node {
+
+	// ------------------------------------------------------------ CONSTRUCTOR
+
+	/** Initializes a new instance of the Color class.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
+	 * @param data The initialization data. */
+	constructor(nodeName, nodeParent, typeConstructor, data = {}) {
+		super(nodeName || "color", nodeParent, data);
+		this._typeConstructor = typeConstructor;
+	}
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The children Nodes (converted to the type). */
+	get children() {
+		return this.nodeChildren;
+	}
+
+	// --------------------------------------------------------- PUBLIC METHODS
+
+	/** Deserializes the instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data, combine = true) {
+
+		for (const key in data) {
+			let node = new this._typeConstructor(key, this, data[key]);
+			this[key] = node;
+		}
+	}
+}
+
+
 
 
 
@@ -870,27 +1081,265 @@ class Color extends Node {
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
-	/** Initializes a new instance of the vector class.
+	/** Initializes a new instance of the Color class.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
 	 * @param data The initialization data. */
-	constructor(data = {}) { super(data); }
+	constructor(nodeName, nodeParent, data) {
+
+		// Call the base class constructor
+		super(nodeName || "color", nodeParent, data);
+
+		// Initialize the child nodes
+		this._r = new Number("r", this);
+		this._g = new Number("g", this);
+		this._b = new Number("b", this);
+
+		// Deserialize the initialization data
+		if (data != undefined)
+			this.deserialize(data);
+	}
+
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The red component of the Color. */
+	get r() { return this._r; }
+
+	/** The green component of the Color. */
+	get g() { return this._g; }
+
+	/** The blue component of the Color. */
+	get b() { return this._b; }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
 	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data) { this.set(data.r, data.g, data.b); }
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data, combine = true) {
 
-	/** Sets the values of the color.
-	 * @param r The value of the Red component color
-	 * @param g The value of the Green component color.
-	 * @param b The value of the Blue component color. */
+		// If the data is an array, copy the first three values
+		if (Array.isArray(data))
+			this.set(data[0], data[1], data[2]);
+		// Otherwise, get the different values
+		else {
+			if (data.r != undefined)
+				this._r.value = data.r;
+			if (data.g != undefined)
+				this._g.value = data.g;
+			if (data.b != undefined)
+				this._b.value = data.b;
+		}
+	}
+
+
+	/** Sets the values of the Color.
+	 * @param r The value of the Red component Color
+	 * @param g The value of the Green component Color.
+	 * @param b The value of the Blue component Color. */
 	set(r = 0, g = 0, b = 0) {
-		this.r = r;
-		this.g = g;
-		this.b = b;
+		this._r.value = r;
+		this._g.value = g;
+		this._b.value = b;
+	}
+
+	/** Gets the representation of the Color. */
+	get() {
+		return "rgb(" + this._r.value + ", " + this._g.value + ", " +
+			this._b.value + ")";
 	}
 }
+
+
+
+
+
+
+/** Defines a Measure. */
+class Measure extends Node {
+
+
+	// ------------------------------------------------------------ CONSTRUCTOR
+
+	/** Initializes a new instance of the vector class.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
+	 * @param data The initialization data. */
+	constructor(nodeName, nodeParent, data) {
+
+		// Call the base class constructor
+		super(nodeName || "measure", nodeParent, data);
+
+		// Initialize the child nodes
+		this._quantity = new Number("quantity", this);
+		this._unit = new String("unit", this);
+
+		// Deserialize the initialization data
+		if (data != undefined)
+			this.deserialize(data);
+	}
+
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The numeric value of the Measure. */
+	get quantity() { return this._quantity; }
+
+	/** The type of unit of the Measure. */
+	get unit() { return this._unit; }
+
+
+	// --------------------------------------------------------- PUBLIC METHODS
+
+	/** Deserializes the instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data, combine = true) {
+		if (typeof data == "number")
+			this._quantity.value = data;
+		else if (typeof data == "string")
+			this._quantity.value = parseInt(data);
+		// Get the different values
+		else {
+			if (data.quantity != undefined)
+				this.quantity.value = data.quantity;
+			if (data.unit != undefined)
+				this.unit.value = data.unit;
+		}
+	}
+
+
+	/** Sets the values of the Measure.
+	 * @param quantity The numeric value of the Measure.
+	 * @param unit The type of unit of the Measure. */
+	set(quantity, unit) {
+		this.quantity.value = quantity;
+		this.unit.value = unit;
+	}
+
+	/** Gets the actula numeric value. */
+	get() {
+		return this.quantity.value;
+	}
+}
+
+
+
+
+/** Defines a Number Node. */
+class Number extends Node {
+
+
+	// ------------------------------------------------------------ CONSTRUCTOR
+
+	/** Initializes a new instance of the Number class.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
+	 * @param data The initialization data. */
+	constructor(nodeName, nodeParent, data) {
+
+		// Call the base class nada
+		super(nodeName || "string", nodeParent, data);
+
+		// Initialize the value
+		this._value = undefined;
+
+		// Deserialize the initialization data
+		if (data != undefined)
+			this.deserialize(data);
+	}
+
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The value of the Number. */
+	get value() { return this._value; }
+	set value(value) {
+		// Ift he value is different, mark the node for update
+		if (this.value != value)
+			this.nodeUpdated = false;
+
+		// Set the new value
+		this._value = value;
+	}
+
+
+	// --------------------------------------------------------- PUBLIC METHODS
+
+	/** Serializes the instance.
+	 * @return The serialized data. */
+	serialize() { return this._value; }
+
+
+	/** Deserializes the instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data, combine = true) {
+		if (data == null)
+			this.value = 0;
+		else if (typeof data == "number")
+			this.value = data;
+	}
+}
+
+
+
+
+/** Defines a Text Node. */
+class String extends Node {
+
+	// ------------------------------------------------------------ CONSTRUCTOR
+
+	/** Initializes a new instance of the String class.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
+	 * @param data The initialization data. */
+	constructor(nodeName, nodeParent, data = {}) {
+		// Call the base class constructor
+		super(nodeName || "string", nodeParent, data);
+
+		// Initialize the value
+		this._value = undefined;
+
+		// Deserialize the initialization data
+		if (data != undefined)
+			this.deserialize(data);
+	}
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The value of the String. */
+	get value() { return this._value; }
+	set value(value) {
+		// Ift he value is different, mark the node for update
+		if (this.value != value)
+			this.nodeUpdated = false;
+
+		// Set the new value
+		this._value = value;
+	}
+
+
+	// --------------------------------------------------------- PUBLIC METHODS
+
+	/** Serializes the instance.
+	 * @return The serialized data. */
+	serialize() { return this._value; }
+
+
+	/** Deserializes the instance.
+	 * @data The data to deserialize.
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data, combine = true) {
+		if (data == null)
+			this.value = null;
+		else if (typeof data == "string")
+			this.value = data;
+	}
+}
+
 
 
 
@@ -901,28 +1350,63 @@ class Vector extends Node {
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
-	/** Initializes a new instance of the vector class.
+	/** Initializes a new instance of the Vector class.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
 	 * @param data The initialization data. */
-	constructor(data = {}) { super(data); }
+	constructor(nodeName, nodeParent, data) {
+
+		// Call the base class constructor
+		super(nodeName || "vector", nodeParent, data);
+
+		// Initialize the child nodes
+		this._x = new Number("x", this);
+		this._y = new Number("y", this);
+
+		// Deserialize the initialization data
+		if (data != undefined)
+			this.deserialize(data);
+	}
+
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The value of the Vector in the X axis. */
+	get x() { return this._x.value; }
+	set x(value) { this._x.value = value; }
+
+	/** The value of the Vector in the Y axis. */
+	get y() { return this._y.value; }
+	set y(value) { this._y.value = value; }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
 	/** Deserializes the instance.
-	 * @data The data to deserialize. */
-	deserialize(data) {
+	 * @combine Whether to combine with or to replace the previous data. */
+	deserialize(data, combine = true) {
+		// If the data is an array, copy the first two values
 		if (Array.isArray(data))
 			this.set(data[0], data[1]);
-		else
-			this.set(data.x, data.y);
+
+		// Otherwise, get the different values
+		else {
+			if (data.x != undefined)
+				this._x.value = data.x;
+			if (data.y != undefined)
+				this._y.value = data.y;
+		}
 	}
 
 
-	/** Sets the values of the vector.
-	 * @param x The value of the vector in the X axis.
-	 * @param y The value of the vector in the Y axis. */
-	set(x = 0, y = 0) { this.x = x; this.y = y; }
+	/** Sets the values of the Vector.
+	 * @param x The value of the Vector in the X axis.
+	 * @param y The value of the Vector in the Y axis. */
+	set(x = 0, y = 0) { this._x.value = x; this._y.value = y; }
+
+	toString() { return this._x.value + ", " + this._y.value; }
 }
+
 
 
 
@@ -980,18 +1464,41 @@ class Element {
 	/** Draws the visual element. */
 	draw(ctx) {
 
-		// Save the current state
-		ctx.save();
-
+		// Get the style to apply
 		let s = Style.combine(this._styles);
 		let p = this._position;
 
+		// Save the current state
+		ctx.save();
+
+		// Calculate the size of the text
+		let textShapes = [], textWidth = 0, textHeight = 0;
+		if (this._text && s.textFont) {
+			ctx.font = s.textSize.get() + " " + s.textFont.value;
+			let lines = this._text.split('\n'), lineCount = lines.length, lineHeight = s.textSize.get(), lineSep = lineHeight * 0.5;
+			textHeight = lineHeight * lineCount;
+
+
+			for (let lineIndex = 0; lineIndex < lineCount; lineIndex++) {
+				let line = lines[lineIndex];
+				let m = ctx.measureText(line);
+				if (textWidth < m.width)
+					textWidth = m.width;
+
+				textShapes.push(new Shape({
+					text: line, x: 0, y: (lineHeight * lineIndex) - textHeight / 2 + lineHeight / 2
+				}));
+			}
+		}
+
+
+		// Create the background shape
 		ctx.beginPath();
-		switch (s.shape) {
+		switch (s.shape.value) {
 			case "circle":
 				if (s.radius == undefined)
 					throw Error("No radius defined");
-				let r = parseFloat(s.radius);
+				let r = s.radius.get();
 				ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
 				break;
 			case "rectangle":
@@ -999,37 +1506,47 @@ class Element {
 			// default: throw Error("Invalid element Type"); break;
 		}
 
+		// Create the background shape
+
 		if (s.color) {
-			ctx.fillStyle = s.color;
+			ctx.fillStyle = s.color.get();
 			ctx.fill();
 		}
 		if (s.borderColor && s.borderWidth) {
-			ctx.lineWidth = parseFloat(s.borderWidth);
-			ctx.strokeStyle = s.borderColor;
+			ctx.lineWidth = s.borderWidth.get();
+			ctx.strokeStyle = s.borderColor.get();
 			ctx.stroke();
 		}
-		if (this._text && s.textColor && s.textFont) {
-			ctx.textAlign = "center";
-			ctx.textBaseline = "middle";
-			ctx.fillStyle = s.textColor;
-			ctx.font = s.textSize + " " + s.textFont;
-			ctx.fillText(this._text, p.x, p.y);
-		}
+
+
+		// Draw the icon
 		if (this._icon) {
+			// console.log(s.serialize());
 			if (s.iconColor)
-				ctx.fillStyle = s.iconColor;
+				ctx.fillStyle = s.iconColor.get();
 			if (s.iconOffsetX)
-				ctx.translate(parseFloat(s.iconOffsetX), 0);
+				ctx.translate(s.iconOffsetX.get(), 0);
 			if (s.iconOffsetY)
-				ctx.translate(0, parseFloat(s.iconOffsetY));
+				ctx.translate(0, s.iconOffsetY.get());
 			if (SHISHO.resources[this._icon]) {
-				SHISHO.resources[this._icon].draw(ctx, p, parseFloat(s.iconSize));
+				SHISHO.resources[this._icon].draw(ctx, p, s.iconSize.get());
 			}
 			else
 				throw Error("Unknow Icon: " + this._icon);
 		}
 
-		// Restore the previous  state
+		// Draw the texts
+		for (const textShape of textShapes) {
+			if (s.textColor)
+				ctx.fillStyle = s.textColor.get();
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			textShape.draw(ctx, p);
+		}
+
+
+
+		// Restore the previous state
 		ctx.restore();
 	}
 
@@ -1270,15 +1787,17 @@ class MenuLayer extends Layer {
 		this._context = this._canvas.getContext('2d');
 
 		// Create 
-		let style = new Style({ name: "test", shape: "circle", color: "blue",
-			radius: "128", iconColor: "white", iconSize: "160" });
-		this._elements.push(new Element("a", new Vector({ x: 0, y: 0 }), [style,
-			new Style({ iconOffsetX: "32", iconOffsetY: "32" })], null, "App"));
-		this._elements.push(new Element("b", new Vector({ x: 0, y: 0 }), [style,
-			new Style({ iconOffsetX: "-32", iconOffsetY: "32" })], null, "Options"));
-		this._elements.push(new Element("c", new Vector({ x: 0, y: 0 }), [style,
-			new Style({ iconOffsetX: "32", iconOffsetY: "-32" })], null, "Test"));
-		this._elements.push(new Element("d", new Vector({ x: 0, y: 0 }), [style]));
+		let style = new Style("test", null, {
+			name: "test", shape: "circle", color: [0, 128, 255],
+			radius: 128, icon_color: [255, 255, 255], icon_size: 160
+		});
+		this._elements.push(new Element("a", new Vector("p", null, { x: 0, y: 0 }), [style,
+			new Style(null, null, { icon_offset_x: 32, icon_offset_y: 32 })], null, "App"));
+		this._elements.push(new Element("b", new Vector("p", null, { x: 0, y: 0 }), [style,
+			new Style(null, null, { icon_offset_x: -32, icon_offset_y: 32 })], null, "Options"));
+		this._elements.push(new Element("c", new Vector("p", null, { x: 0, y: 0 }), [style,
+			new Style(null, null, { icon_offset_x: 32, icon_offset_y: -32 })], null, "Test"));
+		this._elements.push(new Element("d", new Vector("p", null, { x: 0, y: 0 }), [style]));
 	}
 
 
@@ -1300,8 +1819,11 @@ class MenuLayer extends Layer {
 		// Call the base class function
 		super.update(deltaTime);
 
+		// return; // TEMPORAL
+
 		let canvas = this._canvas, ctx = this._context;
 		let w = canvas.width = this._viewport.width, h = canvas.height = this._viewport.height;
+
 
 		// Clean the canvas
 		ctx.clearRect(0, 0, w, h);
@@ -1328,15 +1850,18 @@ class MenuLayer extends Layer {
 /** Defines a visual Shape. */
 class Shape {
 
-
 	// ------------------------------------------------------------ CONSTRUCTOR
 
 	/** Initializes a new Shape instance.
 	 * @param data The initialization data. */
 	constructor(data = {}) {
+		this._x = data.x || 0;
+		this._y = data.y || 0;
 		this._width = data.width || 0;
 		this._height = data.height || 0;
 		this._path = new Path2D(data.path);
+		this._text = data.text;
+		this._font = data.font;
 		this._color = data.color;
 		this._borderColor = data.borderColor;
 		this._borderWidth = data.borderWidth;
@@ -1347,6 +1872,12 @@ class Shape {
 
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The width of the shape. */
+	get x() { return this._x; }
+
+	/** The height of the shape. */
+	get y() { return this._y; }
 
 	/** The width of the shape. */
 	get width() { return this._width; }
@@ -1366,6 +1897,9 @@ class Shape {
 	/** The width of the border. */
 	get borderWidth() { return this._borderWidth; }
 
+	/** The sub-shapes of the shape. */
+	get children() { return this._children; }
+
 
 	// --------------------------------------------------------- PUBLIC METHODS
 	/** Draws the shape.
@@ -1374,6 +1908,10 @@ class Shape {
 
 		// Save the current state
 		ctx.save();
+
+		ctx.translate(this._x, this.y);
+		if (position)
+			ctx.translate(position.x, position.y);
 
 		// If there is a size, calculate the scale
 		if (size) {
@@ -1385,13 +1923,7 @@ class Shape {
 
 			// Scale the object
 			ctx.scale(scale, scale);
-
-			// Position the the shape
-			if (position)
-				ctx.translate(position.x / scale, position.y / scale);
 		}
-		else if (position)
-			ctx.translate(position.x, position.y);
 
 
 		// Draw the path
@@ -1409,6 +1941,15 @@ class Shape {
 			}
 		}
 
+		// Draw the text
+		if (this._text) {
+
+			// if (this._font) ctx.1
+			// Draw the path
+			ctx.fillStyle = this._color;
+			ctx.fillText(this._text, 0, 0);
+		}
+
 		// Draw the subshapes
 		this._children.forEach(child => { child.draw(ctx); });
 
@@ -1417,6 +1958,22 @@ class Shape {
 	}
 }
 
+
+
+
+
+class Rectangle extends Shape {
+
+
+	// ------------------------------------------------------------ CONSTRUCTOR
+
+	/** Initializes a new Shape instance.
+	 * @param data The initialization data. */
+	constructor(data = {}) {
+		super(data);
+		this._radius = data.radius || 0;
+	}
+}
 
 
 
@@ -1438,8 +1995,17 @@ class Viewport {
 		/** The layers of the viewport. */
 		this._layers = {};
 
-		/** */
-		this._DrawTime = 1;
+		/** The last recorded time. */
+		this._lastTime = 0;
+
+		/** The time since the last update. */
+		this._deltaTime = 0;
+
+		this._FPSTime = 0;
+
+		this._FPSCount = 0;
+
+		this._FPSValue = 0;
 
 		this._app = app;
 		this._parentElement = params.parentElement || document.body;
@@ -1500,6 +2066,10 @@ class Viewport {
 
 		// Handle the different events by sending them to the different layers
 		function handleEvent(event) {
+			// Prevent the default event management
+			event.preventDefault();
+
+			// Go through the layers
 			if (this._layers.dialog.handleEvent(event))
 				return;
 			if (this._layers.menu.handleEvent(event))
@@ -1507,12 +2077,16 @@ class Viewport {
 			if (this._layers.main.handleEvent(event))
 				return;
 		}
+		document.addEventListener('wheel', handleEvent.bind(this));
 		document.addEventListener('pointerdown', handleEvent.bind(this));
 		document.addEventListener('pointermove', handleEvent.bind(this));
 		document.addEventListener('pointerup', handleEvent.bind(this));
 		document.addEventListener('touchdown', handleEvent.bind(this));
 		document.addEventListener('touchmove', handleEvent.bind(this));
 		document.addEventListener('touchup', handleEvent.bind(this));
+		document.addEventListener('click', handleEvent.bind(this));
+		document.addEventListener('dblclick', handleEvent.bind(this));
+		document.addEventListener('contextmenu', handleEvent.bind(this));
 
 		// Start updating
 		this.update(0);
@@ -1553,6 +2127,18 @@ class Viewport {
 		this._lastTime = timeInSeconds;
 		if (this._deltaTime > 0.1)
 			this._deltaTime = 0.1;
+		if (this._deltaTime > 0.1)
+			this._deltaTime = 0.1;
+
+		// Calculate the 
+		this._FPSTime += this._deltaTime;
+		this._FPSCount++;
+		if (this._FPSTime > 1) {
+			this._FPSTime -= 1;
+			this._FPSValue = this._FPSCount;
+			this._FPSCount = 0;
+			console.log(this._FPSValue);
+		}
 
 
 		for (const layer in this._layers) {
@@ -1860,6 +2446,7 @@ class Dialog extends Widget {
 
 					}]),
 			], new Background("ImportBackground", layer));
+			case "Info": return new Dialog("Info", layer, title, [new Text("ErrorMessage", null, message)], [new Button("OK", null, "OK")], new Background("ErrorBackground", layer));
 			case "Error": return new Dialog("Error", layer, title, [new Text("ErrorMessage", null, message)], [new Button("OK", null, "OK")], new Background("ErrorBackground", layer));
 		}
 	}
@@ -1935,15 +2522,8 @@ class FileInput extends Widget {
 
 
 
-
 /** Defines a Graph. */
 class Graph extends Widget {
-
-	// ------------------------------------------------------ PUBLIC PROPERTIES
-
-	/** The elements of the layer. */
-	// get elements(): Element[] { return this._elements; }
-
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
@@ -1955,12 +2535,39 @@ class Graph extends Widget {
 		// Call the base class constructor
 		super(name, parent, createElement("canvas", parent.element, parent.name + "Canvas"));
 
-		this._elements = [];
+		/** The translation vector. */
+		this._translateX = 0;
+
+		this._translateY = 0;
+
+		/** The zoom level. */
+		this._zoom = 0;
+
+		/** The scale factor. */
+		this._scale = 1;
+
+		/** The elements to draw. */
+		this._elements = {};
 
 		// Create the canvas for the layer
 		this._canvas = this._element;
 		this._context = this._canvas.getContext('2d');
-		this._translate = new Vector();
+
+		this._basicStyle = new Style(null, null, { "name": "simple",
+			shape: "circle", radius: "50",
+			color: [255, 255, 255], border_width: "2", border_color: [0, 0, 255],
+			text_color: [0, 0, 0], text_font: "Arial", text_size: "16px"
+		});
+
+	}
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The elements of the layer. */
+	// get elements(): Element[] { return this._elements; }
+
+	set zoom(value) {
+
 	}
 
 
@@ -1973,6 +2580,8 @@ class Graph extends Widget {
 		// Call the base class function
 		super.update(deltaTime);
 
+		// return; // TEMPORAL
+
 		// Get the canvas properties
 		let canvas = this._canvas, ctx = this._context;
 		let w = canvas.width = this.parent.element.clientWidth, h = canvas.height = this.parent.element.clientHeight;
@@ -1982,8 +2591,15 @@ class Graph extends Widget {
 		ctx.fillStyle = 'white';
 		ctx.fillRect(0, 0, w, h);
 
-		// Translate the graph
-		ctx.translate(this._translate.x, this._translate.y);
+		// Translate and scale the graph
+		ctx.translate(w / 2, h / 2);
+		ctx.scale(this._scale, this._scale);
+		ctx.translate(this._translateX, this._translateY);
+
+		// DEBUG: Draw the origin point
+		ctx.strokeStyle = 'red';
+		let os = 10;
+		ctx.strokeRect(-os / 2, os / 2, os, os);
 
 		// Get the ontology data
 		let o = this.parent.viewport.app.data.ontology;
@@ -1995,40 +2611,31 @@ class Graph extends Widget {
 		ctx.textAlign = 'center';
 		ctx.textBaseline = "middle";
 
-		this._elements = [];
+		// Draw the connectors for the realtionships
+		for (const relation of o.relations.children) {
+			let origin = o.classes[relation.origin.value].positions.children[0];
+			let target = o.classes[relation.target.value].positions.children[0];
 
-		for (let relationName in o.relations) {
-			let r = o.relations[relationName];
-			let origin = o.classes[r.origin].positions[0];
-			let target = o.classes[r.target].positions[0];
-
-
+			ctx.strokeStyle = 'grey';
 			ctx.beginPath();
 			ctx.moveTo(origin.x, origin.y);
 			ctx.lineTo(target.x, target.y);
 			ctx.stroke();
+			ctx.fillStyle = "black";
 			ctx.textAlign = "center";
 			ctx.textBaseline = "middle";
-			ctx.fillStyle = "black";
 			ctx.font = "Arial 12px";
-			ctx.fillText(r.name, (origin.x + target.x) / 2, (origin.y + target.y) / 2);
+			ctx.fillText(relation.name.value, (origin.x + target.x) / 2, (origin.y + target.y) / 2);
 		}
 
-		let style = new Style({ "name": "simple", shape: "circle", radius: "50",
-			color: "white", borderWidth: "2", borderColor: "black",
-			textColor: "black", textFont: "Arial", textSize: "16px"
-		});
-
-
-		for (let className in o.classes) {
-			let c = o.classes[className];
-
-			let element = new Element(c.name, c.positions[0], [style], c.name);
-			this._elements.push(element);
-
+		// Create the elements to draw
+		this._elements = {};
+		for (const c of o.classes.children) {
+			let className = c.name.value;
+			let element = new Element(className, c.positions.children[0], [this._basicStyle], className);
+			this._elements[className] = element;
 			element.draw(ctx);
 		}
-
 
 	}
 
@@ -2040,24 +2647,47 @@ class Graph extends Widget {
 
 		switch (event.type) {
 			case 'pointermove':
-				let e = event;
-
-				if (e.buttons == 1) {
-					this._translate.x += e.movementX;
-					this._translate.y += e.movementY;
+				let pointerEvent = event;
+				if (pointerEvent.buttons == 1 || pointerEvent.buttons == 2) {
+					this._translateX += pointerEvent.movementX / this._scale;
+					this._translateY += pointerEvent.movementY / this._scale;
 					// console.log(e.movementX + "," + e.movementY);
 				}
 				break;
+			case 'wheel':
+				let wheelEvent = event;
+
+				// Get the point where the user is performing the action
+				let c = this._canvas, w = c.width, h = c.height, x = wheelEvent.clientX - w / 2, y = wheelEvent.clientY - h / 2, previousScale = this._scale;
+
+				// Calculate the new zoom level and scale factor
+				let zoomDelta = ((wheelEvent.deltaY < 0) ? 1 : -1);
+				this._zoom += zoomDelta;
+				this._scale = Math.pow(1.5, this._zoom);
+				console.log('Zoom: ' + (this._scale * 100).toFixed(0) + '%');
+
+				// Transform the location between both scales
+				this._translateX += -x / previousScale + x / this._scale;
+				this._translateY += -y / previousScale + y / this._scale;
+
+				break;
+
 			case 'touchmove':
 				let te = event;
 				// if(te.button == 2) {
 				console.log('touchmove');
 				// }
 				break;
+
+			case 'dblclick':
+				alert("[TODO: Show description of element here]");
+				break;
+
+			// If it is not one of those do not capture the event
+			default: return false;
 		}
-
-
-		return true; // Capture the event
+		// Capture the event
+		return true;
 	}
 }
 

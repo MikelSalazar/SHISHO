@@ -15,7 +15,7 @@ export class Element {
 	protected _position: Vector;
 
 	/** The styles of the element. */
-	protected _styles: Style [];
+	protected _styles: Style[];
 
 	/** The text of the element. */
 	protected _text: string;
@@ -36,7 +36,7 @@ export class Element {
 	get position(): Vector { return this._position; }
 
 	/** The Layer instance the element belongs to. */
-	get styles(): Style [] { return this._styles; }
+	get styles(): Style[] { return this._styles; }
 
 	/** The text of the element. */
 	get text(): string { return this._text; }
@@ -46,7 +46,7 @@ export class Element {
 
 	/** The visibility of the element. */
 	get visibility(): number { return this._visibility; }
-	
+
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
@@ -56,60 +56,92 @@ export class Element {
 	 * @param styles The styles of the element.
 	 * @param text The text of the element.
 	 * @param icon The icon of the element. */
-	constructor (name:string, position: Vector, styles: Style[] = null, 
-		text: string = null, icon: string = null){
+	constructor(name: string, position: Vector, styles: Style[] = null,
+		text: string = null, icon: string = null) {
 
-		this._name = name; 
+		this._name = name;
 		this._position = position || new Vector();
 		this._styles = styles || [];
-		this._text = text; 
-		this._icon = icon; 
+		this._text = text;
+		this._icon = icon;
 	}
 
-	
+
 	// --------------------------------------------------------- PUBLIC METHODS
 
 	/** Draws the visual element. */
 	draw(ctx: CanvasRenderingContext2D) {
 
-		// Save the current state
-		ctx.save(); 
-		
+		// Get the style to apply
 		let s = Style.combine(this._styles); let p = this._position;
 
+		// Save the current state
+		ctx.save();
+
+		// Calculate the size of the text
+		let textShapes: Shape[] = [], textWidth = 0, textHeight = 0;
+		if (this._text && s.textFont) {
+			ctx.font = s.textSize.get() + " " + s.textFont.value;
+			let lines = this._text.split('\n'), lineCount = lines.length,
+				lineHeight = s.textSize.get(), lineSep = lineHeight * 0.5;
+				textHeight = lineHeight * lineCount ;
+
+
+			for (let lineIndex = 0; lineIndex < lineCount; lineIndex++) {
+				let line = lines[lineIndex];
+				let m = ctx.measureText(line);
+				if (textWidth < m.width) textWidth = m.width;
+
+				textShapes.push(new Shape({
+					text: line, x: 0, y: (lineHeight * lineIndex) - textHeight / 2 + lineHeight/2}));
+			}
+		}
+
+
+		// Create the background shape
 		ctx.beginPath();
-		switch(s.shape) {
+		switch (s.shape.value) {
 			case "circle":
-				if(s.radius == undefined) throw Error("No radius defined");
-				let r = parseFloat(s.radius);
-				ctx.arc(p.x, p.y, r, 0, 2* Math.PI);
+				if (s.radius == undefined) throw Error("No radius defined");
+				let r = s.radius.get();
+				ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
 				break;
 			case "rectangle":
 				break;
 			// default: throw Error("Invalid element Type"); break;
 		}
 
-		if (s.color) { ctx.fillStyle = s.color; ctx.fill(); }
-		if (s.borderColor && s.borderWidth) { 
-			ctx.lineWidth = parseFloat(s.borderWidth)
-			ctx.strokeStyle = s.borderColor; ctx.stroke(); 
-		}
-		if (this._text && s.textColor && s.textFont) { 
-			ctx.textAlign = "center"; ctx.textBaseline = "middle";
-			ctx.fillStyle = s.textColor; ctx.font = s.textSize + " " + s.textFont;
-			ctx.fillText(this._text,p.x,p.y);
-		}
-		if (this._icon) { 
-			if (s.iconColor) ctx.fillStyle = s.iconColor;
-			if (s.iconOffsetX) ctx.translate(parseFloat(s.iconOffsetX), 0);
-			if (s.iconOffsetY) ctx.translate(0, parseFloat(s.iconOffsetY));
-			if(SHISHO.resources[this._icon]) {
-				(SHISHO.resources[this._icon] as Shape).draw(ctx, p, parseFloat(s.iconSize));
-			} else throw Error ("Unknow Icon: " + this._icon);
+		// Create the background shape
+
+		if (s.color) { ctx.fillStyle = s.color.get(); ctx.fill(); }
+		if (s.borderColor && s.borderWidth) {
+			ctx.lineWidth = s.borderWidth.get();
+			ctx.strokeStyle = s.borderColor.get(); ctx.stroke();
 		}
 
-		// Restore the previous  state
-		ctx.restore(); 
+
+		// Draw the icon
+		if (this._icon) {
+			// console.log(s.serialize());
+			if (s.iconColor) ctx.fillStyle = s.iconColor.get();
+			if (s.iconOffsetX) ctx.translate(s.iconOffsetX.get(), 0);
+			if (s.iconOffsetY) ctx.translate(0, s.iconOffsetY.get());
+			if (SHISHO.resources[this._icon]) {
+				(SHISHO.resources[this._icon] as Shape).draw(ctx, p, s.iconSize.get());
+			} else throw Error("Unknow Icon: " + this._icon);
+		}
+
+		// Draw the texts
+		for (const textShape of textShapes) {
+			if (s.textColor) ctx.fillStyle = s.textColor.get();
+			ctx.textAlign = "center"; ctx.textBaseline = "middle";
+			textShape.draw(ctx, p);
+		}
+
+
+
+		// Restore the previous state
+		ctx.restore();
 	}
 
 	/** Finds if a point is inside the element */

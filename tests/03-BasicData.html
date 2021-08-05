@@ -4,7 +4,8 @@
 		<meta charset="utf-8">
 		<title>Test 03: Basic Data</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<style> html, body { width:100%; height:100%; margin:0; } </style>
+		<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon"> 
+		<style> html, body { width:100%; height:100%; margin:0; overflow: hidden;} </style>
 		<script src="../builds/shisho.js"></script>
 	</head>
 	<body>
@@ -16,8 +17,8 @@ let OntologyData = {
 	"description": "This is an basic example",
 	"ontology": {
 		"classes": {
-			"Class1": { "name" : "Class1Name", "positions": [[200, 500]]},
-			"Class2": { "name" : "Class2Name", "positions": [[600, 500]]}
+			"Class1": { "name" : "Class1Name", "positions": [[-150, 0]]},
+			"Class2": { "name" : "Class2Name", "positions": [[150, 0]]}
 		},
 		"relations": {
 			"Relation": { "name" : "RelationName", "origin": "Class1", "target": "Class2"},

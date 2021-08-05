@@ -24,15 +24,16 @@ export class Viewport {
 	private _element: HTMLElement;
 
 	/** The last recorded time. */
-	private _lastTime: number;
+	private _lastTime: number = 0;
 
 	/** The time since the last update. */
-	private _deltaTime: number;
+	private _deltaTime: number = 0;
 
-	/** */
-	private _DrawTime: number = 1;
+	private _FPSTime: number = 0;
 
-	private _lastDrawTime: number;
+	private _FPSCount: number = 0;
+
+	private _FPSValue: number = 0;
 
 	/** The locale of the viewport. */
 	// private _locale: Locale;
@@ -138,16 +139,24 @@ export class Viewport {
 
 		// Handle the different events by sending them to the different layers
 		function handleEvent(event: Event) {
+			// Prevent the default event management
+			event.preventDefault();
+
+			// Go through the layers
 			if (this._layers.dialog.handleEvent(event)) return;
 			if (this._layers.menu.handleEvent(event)) return;
 			if (this._layers.main.handleEvent(event)) return;
 		}
+		document.addEventListener('wheel', handleEvent.bind(this));
 		document.addEventListener('pointerdown', handleEvent.bind(this));
 		document.addEventListener('pointermove', handleEvent.bind(this));
 		document.addEventListener('pointerup', handleEvent.bind(this));
 		document.addEventListener('touchdown', handleEvent.bind(this));
 		document.addEventListener('touchmove', handleEvent.bind(this));
 		document.addEventListener('touchup', handleEvent.bind(this));
+		document.addEventListener('click', handleEvent.bind(this));
+		document.addEventListener('dblclick', handleEvent.bind(this));
+		document.addEventListener('contextmenu', handleEvent.bind(this));
 
 		// Start updating
 		this.update(0);
@@ -163,6 +172,15 @@ export class Viewport {
 		this._deltaTime = timeInSeconds - this._lastTime;
 		this._lastTime = timeInSeconds;
 		if (this._deltaTime > 0.1) this._deltaTime = 0.1;
+		if (this._deltaTime > 0.1) this._deltaTime = 0.1;
+
+		// Calculate the 
+		this._FPSTime += this._deltaTime; this._FPSCount++;
+		if (this._FPSTime > 1) {
+			this._FPSTime -= 1;	
+			this._FPSValue = this._FPSCount; this._FPSCount = 0;
+			console.log(this._FPSValue);
+		}
 
 		
 		for (const layer in this._layers) {

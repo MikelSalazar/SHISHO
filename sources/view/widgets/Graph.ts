@@ -18,15 +18,29 @@ export class Graph extends Widget {
 	private _context: CanvasRenderingContext2D;
 
 	/** The translation vector. */
-	private _translate: Vector;
+	private _translateX = 0;
 
-	private _elements: Element[] = [];
+	private _translateY = 0;
+
+	/** The zoom level. */
+	private _zoom: number = 0;
+
+	/** The scale factor. */
+	private _scale: number = 1;
+
+	/** The elements to draw. */
+	private _elements: Record<string, Element> = {};
+
+	private _basicStyle: Style;
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
 	/** The elements of the layer. */
 	// get elements(): Element[] { return this._elements; }
 
+	set zoom(value: number) { 
+
+	}
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
@@ -42,7 +56,13 @@ export class Graph extends Widget {
 		// Create the canvas for the layer
 		this._canvas = this._element as HTMLCanvasElement;
 		this._context = this._canvas.getContext('2d');
-		this._translate = new Vector();
+
+		this._basicStyle = new Style(null, null, {"name": "simple", 
+			shape: "circle", radius: "50", 
+			color: [255,255,255], border_width:"2", border_color: [0,0,255],
+			text_color: [0,0,0], text_font: "Arial", text_size: "16px"
+		});
+
 	}
 
 	
@@ -55,6 +75,8 @@ export class Graph extends Widget {
 		// Call the base class function
 		super.update(deltaTime);
 
+		// return; // TEMPORAL
+
 		// Get the canvas properties
 		let canvas = this._canvas, ctx = this._context; 
 		let w = canvas.width = this.parent.element.clientWidth, 
@@ -65,8 +87,15 @@ export class Graph extends Widget {
 		ctx.fillStyle = 'white';
 		ctx.fillRect(0, 0, w, h);
 
-		// Translate the graph
-		ctx.translate(this._translate.x, this._translate.y);
+		// Translate and scale the graph
+		ctx.translate(w/2,h/2);
+		ctx.scale(this._scale, this._scale);
+		ctx.translate(this._translateX, this._translateY);
+
+		// DEBUG: Draw the origin point
+		ctx.strokeStyle = 'red';
+		let os = 10;
+		ctx.strokeRect(-os/2,os/2,os,os);
 
 		// Get the ontology data
 		let o : Ontology = (this.parent as Layer ).viewport.app.data.ontology;
@@ -75,38 +104,30 @@ export class Graph extends Widget {
 		ctx.fillStyle = 'black'; ctx.font = "16px Arial";
 		ctx.textAlign = 'center'; ctx.textBaseline = "middle";
 
-		this._elements = [];
-		
-		for (let relationName in o.relations) {
-			let r = o.relations[relationName];
-			let origin = o.classes[r.origin].positions[0];
-			let target = o.classes[r.target].positions[0];
+		// Draw the connectors for the realtionships
+		for (const relation of o.relations.children) {
+			let origin = o.classes[relation.origin.value].positions.children[0];
+			let target = o.classes[relation.target.value].positions.children[0];
 
-
+			ctx.strokeStyle = 'grey';
 			ctx.beginPath();
 			ctx.moveTo(origin.x, origin.y);
 			ctx.lineTo(target.x, target.y);
 			ctx.stroke();
-			ctx.textAlign = "center"; ctx.textBaseline = "middle";
-			ctx.fillStyle = "black"; ctx.font = "Arial 12px";
-			ctx.fillText(r.name, (origin.x + target.x)/2,(origin.y + target.y)/2);
-		}
-
-		let style = new Style({"name": "simple", shape: "circle", radius: "50", 
-			color:"white", borderWidth:"2", borderColor:"black",
-			textColor: "black", textFont: "Arial", textSize: "16px"
-		})
-
-
-		for (let className in o.classes) {
-			let c = o.classes[className];
-
-			let element = new Element(c.name, c.positions[0], [style], c.name);
-			this._elements.push(element);
-
-			element.draw(ctx);
+			ctx.fillStyle = "black";
+			ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "Arial 12px";
+			ctx.fillText(relation.name.value, (origin.x + target.x)/2,(origin.y + target.y)/2);
 		}
 		
+		// Create the elements to draw
+		this._elements = {};
+		for (const c of o.classes.children) {
+			let className = c.name.value;
+			let element = new Element(className, c.positions.children[0], 
+				[this._basicStyle], className);
+			this._elements[className] = element;
+			element.draw(ctx);
+		}
 
 	}
 
@@ -118,23 +139,48 @@ export class Graph extends Widget {
 
 		switch(event.type) {
 			case 'pointermove':
-				let e = event as PointerEvent;
-				
-				if(e.buttons == 1) {
-					this._translate.x += e.movementX;
-					this._translate.y += e.movementY;
+				let pointerEvent = event as PointerEvent;
+				if(pointerEvent.buttons == 1 || pointerEvent.buttons == 2) {
+					this._translateX += pointerEvent.movementX / this._scale;
+					this._translateY += pointerEvent.movementY / this._scale;
 					// console.log(e.movementX + "," + e.movementY);
 				}
 			break;
+			case 'wheel':
+				let wheelEvent = event as WheelEvent;
+
+				// Get the point where the user is performing the action
+				let c = this._canvas, w = c.width, h = c.height, 
+					x = wheelEvent.clientX - w/2, y = wheelEvent.clientY - h/2,
+					previousScale = this._scale;
+
+				// Calculate the new zoom level and scale factor
+				let zoomDelta = ((wheelEvent.deltaY < 0)? 1 :-1);
+				this._zoom += zoomDelta;
+				this._scale = Math.pow(1.5, this._zoom)
+				console.log('Zoom: ' + (this._scale * 100).toFixed(0) + '%');
+
+				// Transform the location between both scales
+				this._translateX += -x / previousScale + x / this._scale; 
+				this._translateY += -y / previousScale + y / this._scale; 
+
+			break;
+
 			case 'touchmove':
 				let te = event as TouchEvent;
 				// if(te.button == 2) {
 					console.log('touchmove')
 				// }
 			break;
+
+			case 'dblclick':
+				alert("[TODO: Show description of element here]");
+			break;
+			
+			// If it is not one of those do not capture the event
+			default: return false;
 		}
-
-
-		return true; // Capture the event
+		// Capture the event
+		return true; 
 	}
 }
