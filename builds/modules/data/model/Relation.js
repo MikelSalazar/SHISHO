@@ -1,10 +1,9 @@
 import { Node } from "../Node.js";
 import { String } from "../types/String.js";
+import { Vector } from "../types/Vector.js";
 
 /** Defines a Relation between two Class instances. */
 export class Relation extends Node {
-
-
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
@@ -21,12 +20,12 @@ export class Relation extends Node {
 		this._description = new String("description", this);
 		this._origin = new String("origin", this);
 		this._target = new String("target", this);
+		this._midpoint = new Vector("midpoint", this);
 
 		// Deserialize the initialization data
 		if (data != undefined)
 			this.deserialize(data);
 	}
-
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
@@ -41,6 +40,9 @@ export class Relation extends Node {
 
 	/** The target Class of the Relation. */
 	get target() { return this._target; }
+
+	/** The target Class of the Relation. */
+	get midpoint() { return this._midpoint; }
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
@@ -62,5 +64,7 @@ export class Relation extends Node {
 			this._target.deserialize(data.target);
 		else
 			throw Error("Relation without target (" + data.name + ").");
+		if (data.midpoint)
+			this._midpoint.deserialize(data.midpoint);
 	}
 }

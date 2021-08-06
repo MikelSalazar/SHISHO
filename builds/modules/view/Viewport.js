@@ -2,6 +2,7 @@ import SHISHO from "../SHISHO.js";
 import { DialogLayer } from "./layers/DialogLayer.js";
 import { MainLayer } from "./layers/MainLayer.js";
 import { MenuLayer } from "./layers/MenuLayer.js";
+import { DebugLayer } from "./layers/DebugLayer.js";
 import { Dialog } from "./widgets/Dialog.js";
 
 /** Defines a viewport. */
@@ -18,17 +19,23 @@ export class Viewport {
 		/** The layers of the viewport. */
 		this._layers = {};
 
-		/** The last recorded time. */
-		this._lastTime = 0;
+		/** The last update time. */
+		this._updateTime = 0;
 
 		/** The time since the last update. */
 		this._deltaTime = 0;
 
-		this._FPSTime = 0;
+		/** The current FPS time counter. */
+		this._FPSTimeCounter = 0;
 
-		this._FPSCount = 0;
+		/** The current FPS frame counter. */
+		this._FPSFrameCounter = 0;
 
-		this._FPSValue = 0;
+		/** The last FPS value. */
+		this._FPS = 0;
+
+		/** Indicates whether to force updates or to wait for changes. */
+		this._forcedUpdates = false;
 
 		this._app = app;
 		this._parentElement = params.parentElement || document.body;
@@ -60,6 +67,7 @@ export class Viewport {
 			createCssRule(".ShishoWindowButton", "width:max-content; height:max-content; margin: 1vmin;" +
 				"background: blue; color: white; border-radius: 2vmin;" +
 				"font-size: 3vmin; text-align: center; padding: 1vmin;");
+			createCssRule(".ShishoDebugFPSLabel", "font-family: Arial, Helvetica, sans-serif; font-size: 2vmin; color: red");
 		}
 
 		// Create the wrapper for the rest of the elements
@@ -73,6 +81,7 @@ export class Viewport {
 		let main = this._layers.main = new MainLayer(this);
 		let menu = this._layers.menu = new MenuLayer(this);
 		let dialog = this.layers.dialog = new DialogLayer(this);
+		let debug = this.layers.debug = new DebugLayer(this);
 
 		document.addEventListener('keyup', (e) => {
 			if (e.ctrlKey && e.code == 'KeyI') {
@@ -89,6 +98,7 @@ export class Viewport {
 
 		// Handle the different events by sending them to the different layers
 		function handleEvent(event) {
+
 			// Prevent the default event management
 			event.preventDefault();
 
@@ -112,9 +122,9 @@ export class Viewport {
 		document.addEventListener('contextmenu', handleEvent.bind(this));
 
 		// Start updating
-		this.update(0);
+		// this.update(0);
+		requestAnimationFrame(this.update.bind(this));
 	}
-
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
@@ -130,14 +140,20 @@ export class Viewport {
 	/** The wrapper element. */
 	get element() { return this._element; }
 
-	/** The time since the last update. */
-	get deltaTime() { return this._deltaTime; }
-
 	/** The width of the viewport. */
 	get width() { return this._element.clientWidth; }
 
 	/** The height of the viewport. */
 	get height() { return this._element.clientHeight; }
+
+	/** The last update time. */
+	get updateTime() { return this._updateTime; }
+
+	/** The time since the last update. */
+	get deltaTime() { return this._deltaTime; }
+
+	/** The time since the last update. */
+	get FPS() { return this._FPS; }
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
@@ -145,30 +161,27 @@ export class Viewport {
 	 * @param time The current time (milliseconds from beginning). */
 	update(time = 0) {
 
+		// Calculate the current delta time
 		let timeInSeconds = (time > 0) ? time / 1000 : 0.001;
-		this._deltaTime = timeInSeconds - this._lastTime;
-		this._lastTime = timeInSeconds;
-		if (this._deltaTime > 0.1)
-			this._deltaTime = 0.1;
+		this._deltaTime = timeInSeconds - this._updateTime;
+		this._updateTime = timeInSeconds;
 		if (this._deltaTime > 0.1)
 			this._deltaTime = 0.1;
 
-		// Calculate the 
-		this._FPSTime += this._deltaTime;
-		this._FPSCount++;
-		if (this._FPSTime > 1) {
-			this._FPSTime -= 1;
-			this._FPSValue = this._FPSCount;
-			this._FPSCount = 0;
-			console.log(this._FPSValue);
+		// Calculate the Frames Per Second
+		this._FPSTimeCounter += this._deltaTime;
+		this._FPSFrameCounter++;
+		if (this._FPSTimeCounter > 1) {
+			this._FPSTimeCounter -= 1;
+			this._FPS = this._FPSFrameCounter;
+			this._FPSFrameCounter = 0;
 		}
 
-
+		// Update the layers
 		for (const layer in this._layers) {
-			this._layers[layer].update(this._deltaTime);
+			this._layers[layer].update(this._deltaTime, this._forcedUpdates);
 		}
 
-		// console.log(time);
 
 		// Try to redraw as soon as possible
 		requestAnimationFrame(this.update.bind(this));

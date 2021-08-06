@@ -52,11 +52,9 @@ export class MenuLayer extends Layer {
 	// --------------------------------------------------------- PUBLIC METHODS
 
 	/** Updates the layer.
-	 * @param deltaTime The time since the last call. */
-	update(deltaTime) {
-
-		// Call the base class function
-		super.update(deltaTime);
+	 * @param deltaTime The time since the last call.
+	 * @param forced Indicates wheter to force the update or not. */
+	update(deltaTime, forced = false) {
 
 		// return; // TEMPORAL
 
@@ -80,8 +78,7 @@ export class MenuLayer extends Layer {
 			this._elements[elementIndex].draw(ctx);
 		}
 
-
-		// ctx.fillStyle = 'red';
-		// ctx.fillRect(50,50,w/2,h/2);
+		// Call the base class function
+		super.update(deltaTime);
 	}
 }

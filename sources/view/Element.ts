@@ -2,6 +2,7 @@ import { Vector } from "../data/types/Vector";
 import { Style } from "../data/model/Style";
 import { SHISHO } from "../SHISHO";
 import { Shape } from "./Shape";
+import { Circle } from "./shapes/Circle";
 
 /** Defines a visual Element. */
 export class Element {
@@ -16,6 +17,9 @@ export class Element {
 
 	/** The styles of the element. */
 	protected _styles: Style[];
+
+	/** The icon of the element. */
+	protected _shape: Shape;
 
 	/** The text of the element. */
 	protected _text: string;
@@ -37,6 +41,9 @@ export class Element {
 
 	/** The Layer instance the element belongs to. */
 	get styles(): Style[] { return this._styles; }
+
+	/** The background shapes of the element. */
+	get shape(): Shape { return this._shape; }
 
 	/** The text of the element. */
 	get text(): string { return this._text; }
@@ -97,28 +104,31 @@ export class Element {
 			}
 		}
 
+		// Create the background shape
+		// ctx.beginPath();
+		// switch (s.shape.value) {
+		// 	case "circle":
+		// 		if (s.radius == undefined) throw Error("No radius defined");
+		// 		let r = s.radius.get();
+		// 		ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
+		// 		break;
+		// 	case "rectangle":
+		// 		break;
+		// 	// default: throw Error("Invalid element Type"); break;
+		// }
 
 		// Create the background shape
-		ctx.beginPath();
-		switch (s.shape.value) {
-			case "circle":
-				if (s.radius == undefined) throw Error("No radius defined");
-				let r = s.radius.get();
-				ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
-				break;
-			case "rectangle":
-				break;
-			// default: throw Error("Invalid element Type"); break;
+		if (!this._shape) {
+			switch (s.shape.value) {
+				case "circle":
+					this._shape = new Circle({x: 0, y: 0, 
+						radius: s.radius.get(), color: s.color.get(),
+						borderColor: s.borderColor.get(),
+						borderWidth: s.borderWidth.get()});
+					break;
+			}
 		}
-
-		// Create the background shape
-
-		if (s.color) { ctx.fillStyle = s.color.get(); ctx.fill(); }
-		if (s.borderColor && s.borderWidth) {
-			ctx.lineWidth = s.borderWidth.get();
-			ctx.strokeStyle = s.borderColor.get(); ctx.stroke();
-		}
-
+		this._shape.draw(ctx, p);
 
 		// Draw the icon
 		if (this._icon) {
@@ -145,7 +155,7 @@ export class Element {
 	}
 
 	/** Finds if a point is inside the element */
-	isInside(point: Vector): boolean {
+	isInside(x: number, y: number): boolean {
 		return false;
 	}
 }

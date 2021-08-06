@@ -1,40 +1,40 @@
 /** Defines a visual Shape. */
 export class Shape {
 
-	// --------------------------------------------------------- PRIVATE FIELDS
+	// ------------------------------------------------------- PROTECTED FIELDS
 
 	/** The x position of the shape. */
-	private _x: number;
+	protected _x: number;
 
 	/** The y position of the shape. */
-	private _y: number;
+	protected _y: number;
 
 	/** The width of the shape. */
-	private _width: number;
+	protected _width: number;
 
 	/** The height of the shape. */
-	private _height: number;
+	protected _height: number;
 
 	/** The SVG path of the shape. */
-	private _path: Path2D;
+	protected _path: Path2D;
 
 	/** The text of the shape. */
-	private _text: string;
+	protected _text: string;
 
 	/** The text font of the shape. */
-	private _font: string;
+	protected _font: string;
 
 	/** The color of the shape. */
-	private _color: string;
+	protected _color: string;
 
 	/** The color of the shape border. */
-	private _borderColor: string;
+	protected _borderColor: string;
 
 	/** The width of the shape border. */
-	private _borderWidth: string;
+	protected _borderWidth: number;
 
 	/** The sub-shapes of the shape. */
-	private _children: Shape[];
+	protected _children: Shape[];
 
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
@@ -61,7 +61,7 @@ export class Shape {
 	get borderColor(): string { return this._borderColor; }
 
 	/** The width of the border. */
-	get borderWidth(): string { return this._borderWidth; }
+	get borderWidth(): number { return this._borderWidth; }
 
 	/** The sub-shapes of the shape. */
 	get children (): Shape[] { return this._children; }
@@ -86,6 +86,7 @@ export class Shape {
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
+
 	/** Draws the shape.
 	 * @param ctx The 2D context where to draw the shape. */
 	draw(ctx: CanvasRenderingContext2D, position = null, size = null) {
@@ -118,8 +119,8 @@ export class Shape {
 
 			// Draw the outline
 			if (this._borderColor && this._borderWidth) {
-				ctx.lineWidth = parseFloat(this._borderWidth)
-				ctx.strokeStyle = this._borderColor; ctx.stroke();
+				ctx.lineWidth = this._borderWidth;
+				ctx.strokeStyle = this._borderColor; ctx.stroke(this._path);
 			}
 		}
 

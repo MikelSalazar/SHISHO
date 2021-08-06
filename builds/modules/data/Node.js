@@ -1,6 +1,7 @@
 /** Defines a data Node. */
 export class Node {
 
+
 	// ------------------------------------------------------------ CONSTRUCTOR
 
 	/** Initializes a new Node instance.
@@ -35,6 +36,10 @@ export class Node {
 	get nodeUpdated() { return this._nodeUpdated; }
 	set nodeUpdated(value) {
 
+		// If the value provided is the same than the current one, do nothing
+		if (this._nodeUpdated == value)
+			return;
+
 		// Propagate "true" values downwards in the node hierarchy
 		if (value)
 			this._nodeChildren.forEach(c => { c.nodeUpdated = true; });
@@ -43,7 +48,7 @@ export class Node {
 		else if (this._nodeParent)
 			this._nodeParent.nodeUpdated = false;
 
-		// Apply the value
+		// Apply the new value
 		this._nodeUpdated = value;
 	}
 

@@ -14,8 +14,8 @@ export class NodeSet<NodeType> extends Node {
 	 * @param nodeName The name of the Node.
 	 * @param nodeParent The parent Node.
 	 * @param data The initialization data. */
-	constructor(nodeName: string, nodeParent: Node | null, 
-		typeConstructor: any, data: any = {}) { 
+	constructor(nodeName: string, nodeParent: Node | null,
+		typeConstructor: any, data: any = {}) {
 		super(nodeName || "color", nodeParent, data);
 		this._typeConstructor = typeConstructor;
 	}
@@ -23,7 +23,7 @@ export class NodeSet<NodeType> extends Node {
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
 	/** The children Nodes (converted to the type). */
-	get children(): NodeType[] { 
+	get children(): NodeType[] {
 		return (this.nodeChildren as unknown) as NodeType[];
 	}
 
@@ -33,10 +33,14 @@ export class NodeSet<NodeType> extends Node {
 	 * @data The data to deserialize.
 	 * @combine Whether to combine with or to replace the previous data. */
 	deserialize(data: any, combine: boolean = true) {
-		
+
 		for (const key in data) {
 			let node: Node = new this._typeConstructor(key, this, data[key]);
 			this[key] = node;
 		}
 	}
+
+	/** Gets a specific Node in the collection. 
+	 * @param name The name of the node to get. */
+	get(name: string): NodeType { return this[name]; }
 }

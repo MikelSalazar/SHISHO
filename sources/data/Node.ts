@@ -30,15 +30,19 @@ export abstract class Node {
 	get nodeUpdated(): boolean { return this._nodeUpdated; }
 	set nodeUpdated(value: boolean) {
 		
+		// If the value provided is the same than the current one, do nothing
+		if (this._nodeUpdated == value) return;
+
 		// Propagate "true" values downwards in the node hierarchy
 		if (value) this._nodeChildren.forEach(c => { c.nodeUpdated = true; });
 
 		// Otherwise, propagate "false" values updwards in the node hierarchy
 		else if(this._nodeParent) this._nodeParent.nodeUpdated = false;
 			
-		// Apply the value
+		// Apply the new value
 		this._nodeUpdated = value
 	}
+
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 

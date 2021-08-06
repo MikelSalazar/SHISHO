@@ -1,5 +1,6 @@
 import { Node } from "../Node";
 import { String } from "../types/String";
+import { Vector } from "../types/Vector";
 import { Ontology } from "./Ontology";
 
 /** Defines a Relation between two Class instances. */
@@ -19,6 +20,8 @@ export class Relation extends Node {
 	/** The target Class of the Relation. */
 	private _target: String;
 
+	/** The position of the midpoint. */
+	private _midpoint: Vector;
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
@@ -34,7 +37,8 @@ export class Relation extends Node {
 	/** The target Class of the Relation. */
 	get target(): String { return this._target; }
 
-
+	/** The target Class of the Relation. */
+	get midpoint(): Vector { return this._midpoint; }
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
@@ -51,6 +55,7 @@ export class Relation extends Node {
 		this._description = new String("description", this);
 		this._origin = new String("origin", this);
 		this._target = new String("target", this);
+		this._midpoint = new Vector("midpoint", this);
 
 		// Deserialize the initialization data
 		if (data != undefined) this.deserialize(data);
@@ -69,6 +74,7 @@ export class Relation extends Node {
 		else throw Error("Relation without origin (" + data.name + ").");
 		if (data.target) this._target.deserialize(data.target);
 		else throw Error("Relation without target (" + data.name + ").");
+		if (data.midpoint) this._midpoint.deserialize(data.midpoint);
 	}
 
 }

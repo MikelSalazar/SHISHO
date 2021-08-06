@@ -2,6 +2,7 @@ import { Vector } from "../data/types/Vector.js";
 import { Style } from "../data/model/Style.js";
 import { SHISHO } from "../SHISHO.js";
 import { Shape } from "./Shape.js";
+import { Circle } from "./shapes/Circle.js";
 
 /** Defines a visual Element. */
 export class Element {
@@ -38,6 +39,9 @@ export class Element {
 
 	/** The Layer instance the element belongs to. */
 	get styles() { return this._styles; }
+
+	/** The background shapes of the element. */
+	get shape() { return this._shape; }
 
 	/** The text of the element. */
 	get text() { return this._text; }
@@ -81,33 +85,31 @@ export class Element {
 			}
 		}
 
+		// Create the background shape
+		// ctx.beginPath();
+		// switch (s.shape.value) {
+		// 	case "circle":
+		// 		if (s.radius == undefined) throw Error("No radius defined");
+		// 		let r = s.radius.get();
+		// 		ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
+		// 		break;
+		// 	case "rectangle":
+		// 		break;
+		// 	// default: throw Error("Invalid element Type"); break;
+		// }
 
 		// Create the background shape
-		ctx.beginPath();
-		switch (s.shape.value) {
-			case "circle":
-				if (s.radius == undefined)
-					throw Error("No radius defined");
-				let r = s.radius.get();
-				ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
-				break;
-			case "rectangle":
-				break;
-			// default: throw Error("Invalid element Type"); break;
+		if (!this._shape) {
+			switch (s.shape.value) {
+				case "circle":
+					this._shape = new Circle({ x: 0, y: 0,
+						radius: s.radius.get(), color: s.color.get(),
+						borderColor: s.borderColor.get(),
+						borderWidth: s.borderWidth.get() });
+					break;
+			}
 		}
-
-		// Create the background shape
-
-		if (s.color) {
-			ctx.fillStyle = s.color.get();
-			ctx.fill();
-		}
-		if (s.borderColor && s.borderWidth) {
-			ctx.lineWidth = s.borderWidth.get();
-			ctx.strokeStyle = s.borderColor.get();
-			ctx.stroke();
-		}
-
+		this._shape.draw(ctx, p);
 
 		// Draw the icon
 		if (this._icon) {
@@ -141,7 +143,7 @@ export class Element {
 	}
 
 	/** Finds if a point is inside the element */
-	isInside(point) {
+	isInside(x, y) {
 		return false;
 	}
 }

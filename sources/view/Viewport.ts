@@ -3,6 +3,7 @@ import { Layer } from "./Layer";
 import { DialogLayer } from "./layers/DialogLayer";
 import { MainLayer } from "./layers/MainLayer";
 import { MenuLayer } from "./layers/MenuLayer";
+import { DebugLayer } from "./layers/DebugLayer";
 import { Style } from "../data/model/Style";
 import { Dialog } from "./widgets/Dialog";
 
@@ -12,7 +13,7 @@ export class Viewport {
 	// --------------------------------------------------------- PRIVATE FIELDS
 
 	/** The SHISHO App the viewport belongs to. */
-	private _app : SHISHO;
+	private _app: SHISHO;
 
 	/** The layers of the viewport. */
 	private _layers: Record<string, Layer> = {};
@@ -23,17 +24,20 @@ export class Viewport {
 	/** The wrapper element. */
 	private _element: HTMLElement;
 
-	/** The last recorded time. */
-	private _lastTime: number = 0;
+	/** The last update time. */
+	private _updateTime: number = 0;
 
 	/** The time since the last update. */
 	private _deltaTime: number = 0;
 
-	private _FPSTime: number = 0;
+	/** The current FPS time counter. */
+	private _FPSTimeCounter: number = 0;
 
-	private _FPSCount: number = 0;
+	/** The current FPS frame counter. */
+	private _FPSFrameCounter: number = 0;
 
-	private _FPSValue: number = 0;
+	/** The last FPS value. */
+	private _FPS: number = 0;
 
 	/** The locale of the viewport. */
 	// private _locale: Locale;
@@ -41,6 +45,8 @@ export class Viewport {
 	/** The style of the viewport. */
 	private _style: Style;
 
+	/** Indicates whether to force updates or to wait for changes. */
+	private _forcedUpdates: boolean = false;
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
@@ -56,14 +62,20 @@ export class Viewport {
 	/** The wrapper element. */
 	get element(): HTMLElement { return this._element; }
 
-	/** The time since the last update. */
-	get deltaTime(): number { return this._deltaTime; }
-
 	/** The width of the viewport. */
 	get width(): number { return this._element.clientWidth; }
 
 	/** The height of the viewport. */
 	get height(): number { return this._element.clientHeight; }
+
+	/** The last update time. */
+	get updateTime(): number { return this._updateTime; }
+
+	/** The time since the last update. */
+	get deltaTime(): number { return this._deltaTime; }
+
+	/** The time since the last update. */
+	get FPS(): number { return this._FPS; }
 
 
 	// ------------------------------------------------------------ CONSTRUCTOR
@@ -71,7 +83,7 @@ export class Viewport {
 	/** Initializes a new Viewport instance.
 	 * @param app The associated App instance.
 	 * @param {*} params The initialization parameters. */
-	constructor(app: SHISHO , params: any = {}) {
+	constructor(app: SHISHO, params: any = {}) {
 
 		this._app = app;
 		this._parentElement = params.parentElement || document.body;
@@ -84,31 +96,33 @@ export class Viewport {
 			createCssRule(".ShishoLayer", "position: absolute;" +
 				"width: 100%; height: 100%; margin:0; overflow: hidden;");
 			createCssRule(".ShishoBackground", "position: absolute;" +
-				"width: 100%; height: 100%; margin:0; overflow: hidden;" + 
+				"width: 100%; height: 100%; margin:0; overflow: hidden;" +
 				"background: #00000080; ");
 			createCssRule(".ShishoWindow", "position: relative;" +
 				"top: 50%; left: 50%; transform: translate(-50%,-50%); " +
-				"box-sizing: border-box; background: white; color: black;" + 
+				"box-sizing: border-box; background: white; color: black;" +
 				"border: 2px solid blue; border-radius: 2vmin;" +
 				"font-family: Arial, Helvetica, sans-serif; font-size: 2vmin;" +
 				"width: max-content; height:max-content; box-sizing: border-box;");
-			createCssRule(".ShishoWindowTitle", 
+			createCssRule(".ShishoWindowTitle",
 				"width:100%; box-sizing: border-box;" +
 				"background: blue; color: white; border-radius: 2vmin;" +
 				"font-size: 3vmin; text-align: center; padding: 1vmin;");
-			createCssRule(".ShishoWindowContents", 
-				"min-width:10vmin; min-height:10vmin; padding: 1vmin;" + 
-				"text-align: center;"); 
-			createCssRule(".ShishoWindowContents label ", 
-				"font-weight:bold"); 
-			createCssRule(".ShishoWindowContents input, .ShishoWindowContents select", 
-				"font-family: Arial, Helvetica, sans-serif; font-size: 2vmin;"); 
-			createCssRule(".ShishoWindowButtonGroup", 
+			createCssRule(".ShishoWindowContents",
+				"min-width:10vmin; min-height:10vmin; padding: 1vmin;" +
+				"text-align: center;");
+			createCssRule(".ShishoWindowContents label ",
+				"font-weight:bold");
+			createCssRule(".ShishoWindowContents input, .ShishoWindowContents select",
+				"font-family: Arial, Helvetica, sans-serif; font-size: 2vmin;");
+			createCssRule(".ShishoWindowButtonGroup",
 				"display:flex; justify-content: space-evenly;");
-			createCssRule(".ShishoWindowButton", 
+			createCssRule(".ShishoWindowButton",
 				"width:max-content; height:max-content; margin: 1vmin;" +
 				"background: blue; color: white; border-radius: 2vmin;" +
 				"font-size: 3vmin; text-align: center; padding: 1vmin;");
+			createCssRule(".ShishoDebugFPSLabel",
+				"font-family: Arial, Helvetica, sans-serif; font-size: 2vmin; color: red");
 		}
 
 		// Create the wrapper for the rest of the elements
@@ -123,15 +137,16 @@ export class Viewport {
 		let main = this._layers.main = new MainLayer(this);
 		let menu = this._layers.menu = new MenuLayer(this);
 		let dialog = this.layers.dialog = new DialogLayer(this);
+		let debug = this.layers.debug = new DebugLayer(this);
 
-		document.addEventListener('keyup', (e:KeyboardEvent)=>{ 
-			if(e.ctrlKey && e.code == 'KeyI') {
-				if (this.layers.dialog.children.length == 0) 
-					Dialog.create("Import",this.layers.dialog);
+		document.addEventListener('keyup', (e: KeyboardEvent) => {
+			if (e.ctrlKey && e.code == 'KeyI') {
+				if (this.layers.dialog.children.length == 0)
+					Dialog.create("Import", this.layers.dialog);
 			}
-			if(e.ctrlKey && e.code == 'KeyE') {
-				if (this.layers.dialog.children.length == 0) 
-					Dialog.create("Export",this.layers.dialog);
+			if (e.ctrlKey && e.code == 'KeyE') {
+				if (this.layers.dialog.children.length == 0)
+					Dialog.create("Export", this.layers.dialog);
 				// console.log(JSON.stringify(this.app.data, null, '\t'));
 			}
 			e.preventDefault();
@@ -139,6 +154,7 @@ export class Viewport {
 
 		// Handle the different events by sending them to the different layers
 		function handleEvent(event: Event) {
+
 			// Prevent the default event management
 			event.preventDefault();
 
@@ -159,7 +175,8 @@ export class Viewport {
 		document.addEventListener('contextmenu', handleEvent.bind(this));
 
 		// Start updating
-		this.update(0);
+		// this.update(0);
+		requestAnimationFrame(this.update.bind(this));
 	}
 
 	// --------------------------------------------------------- PUBLIC METHODS
@@ -168,27 +185,25 @@ export class Viewport {
 	 * @param time The current time (milliseconds from beginning). */
 	update(time = 0) {
 
-		let timeInSeconds = (time> 0)? time/1000: 0.001;
-		this._deltaTime = timeInSeconds - this._lastTime;
-		this._lastTime = timeInSeconds;
-		if (this._deltaTime > 0.1) this._deltaTime = 0.1;
+		// Calculate the current delta time
+		let timeInSeconds = (time > 0) ? time / 1000 : 0.001;
+		this._deltaTime = timeInSeconds - this._updateTime;
+		this._updateTime = timeInSeconds;
 		if (this._deltaTime > 0.1) this._deltaTime = 0.1;
 
-		// Calculate the 
-		this._FPSTime += this._deltaTime; this._FPSCount++;
-		if (this._FPSTime > 1) {
-			this._FPSTime -= 1;	
-			this._FPSValue = this._FPSCount; this._FPSCount = 0;
-			console.log(this._FPSValue);
+		// Calculate the Frames Per Second
+		this._FPSTimeCounter += this._deltaTime; this._FPSFrameCounter++;
+		if (this._FPSTimeCounter > 1) {
+			this._FPSTimeCounter -= 1;
+			this._FPS = this._FPSFrameCounter; this._FPSFrameCounter = 0;
 		}
 
-		
+		// Update the layers
 		for (const layer in this._layers) {
-			this._layers[layer].update(this._deltaTime);
-		} 
+			this._layers[layer].update(this._deltaTime, this._forcedUpdates);
+		}
 
-		// console.log(time);
-		
+
 		// Try to redraw as soon as possible
 		requestAnimationFrame(this.update.bind(this));
 	}
@@ -206,8 +221,8 @@ export class Viewport {
  * @param className The class name(s) of the element.
  * @param style The CSS style text of the element.
  * @param text The text of the element. */
-export function createElement( tag: string, parent: HTMLElement, 
-	id: string = null, name: string = null, className: string = null, 
+export function createElement(tag: string, parent: HTMLElement,
+	id: string = null, name: string = null, className: string = null,
 	style: string = null, text: string = null): HTMLElement {
 	if (!tag) throw Error("Tag required")
 	let element = document.createElement(tag);
@@ -217,15 +232,15 @@ export function createElement( tag: string, parent: HTMLElement,
 	if (className) element.className = className;
 	if (style) element.style.cssText = style;
 	if (text) element.innerText = text;
-	return element ;
+	return element;
 }
 
 /** Creates a CSS rule.
  * @param selectorText The selector of the CSS rule.
  * @param styleText The style text block of the CSS rule.
  * @param override Whether or not to override a previous rule. */
-export function createCssRule(selectorText: string, styleText: string, 
-		override: boolean = false) {
+export function createCssRule(selectorText: string, styleText: string,
+	override: boolean = false) {
 	// If there is no stylesheet, create it
 	if (document.styleSheets.length == 0)
 		document.head.append(document.createElement('style'));

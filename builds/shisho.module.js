@@ -453,6 +453,7 @@ export class OwlImporter {
 /** Defines a data Node. */
 export class Node {
 
+
 	// ------------------------------------------------------------ CONSTRUCTOR
 
 	/** Initializes a new Node instance.
@@ -487,6 +488,10 @@ export class Node {
 	get nodeUpdated() { return this._nodeUpdated; }
 	set nodeUpdated(value) {
 
+		// If the value provided is the same than the current one, do nothing
+		if (this._nodeUpdated == value)
+			return;
+
 		// Propagate "true" values downwards in the node hierarchy
 		if (value)
 			this._nodeChildren.forEach(c => { c.nodeUpdated = true; });
@@ -495,7 +500,7 @@ export class Node {
 		else if (this._nodeParent)
 			this._nodeParent.nodeUpdated = false;
 
-		// Apply the value
+		// Apply the new value
 		this._nodeUpdated = value;
 	}
 
@@ -708,10 +713,9 @@ export class Property extends Node {
 
 
 
+
 /** Defines a Relation between two Class instances. */
 export class Relation extends Node {
-
-
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
@@ -728,12 +732,12 @@ export class Relation extends Node {
 		this._description = new String("description", this);
 		this._origin = new String("origin", this);
 		this._target = new String("target", this);
+		this._midpoint = new Vector("midpoint", this);
 
 		// Deserialize the initialization data
 		if (data != undefined)
 			this.deserialize(data);
 	}
-
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
@@ -748,6 +752,9 @@ export class Relation extends Node {
 
 	/** The target Class of the Relation. */
 	get target() { return this._target; }
+
+	/** The target Class of the Relation. */
+	get midpoint() { return this._midpoint; }
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
@@ -769,6 +776,8 @@ export class Relation extends Node {
 			this._target.deserialize(data.target);
 		else
 			throw Error("Relation without target (" + data.name + ").");
+		if (data.midpoint)
+			this._midpoint.deserialize(data.midpoint);
 	}
 }
 
@@ -1069,6 +1078,10 @@ export class NodeSet extends Node {
 			this[key] = node;
 		}
 	}
+
+	/** Gets a specific Node in the collection.
+	 * @param name The name of the node to get. */
+	get(name) { return this[name]; }
 }
 
 
@@ -1413,6 +1426,7 @@ export class Vector extends Node {
 
 
 
+
 /** Defines a visual Element. */
 export class Element {
 
@@ -1448,6 +1462,9 @@ export class Element {
 
 	/** The Layer instance the element belongs to. */
 	get styles() { return this._styles; }
+
+	/** The background shapes of the element. */
+	get shape() { return this._shape; }
 
 	/** The text of the element. */
 	get text() { return this._text; }
@@ -1491,33 +1508,31 @@ export class Element {
 			}
 		}
 
+		// Create the background shape
+		// ctx.beginPath();
+		// switch (s.shape.value) {
+		// 	case "circle":
+		// 		if (s.radius == undefined) throw Error("No radius defined");
+		// 		let r = s.radius.get();
+		// 		ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
+		// 		break;
+		// 	case "rectangle":
+		// 		break;
+		// 	// default: throw Error("Invalid element Type"); break;
+		// }
 
 		// Create the background shape
-		ctx.beginPath();
-		switch (s.shape.value) {
-			case "circle":
-				if (s.radius == undefined)
-					throw Error("No radius defined");
-				let r = s.radius.get();
-				ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
-				break;
-			case "rectangle":
-				break;
-			// default: throw Error("Invalid element Type"); break;
+		if (!this._shape) {
+			switch (s.shape.value) {
+				case "circle":
+					this._shape = new Circle({ x: 0, y: 0,
+						radius: s.radius.get(), color: s.color.get(),
+						borderColor: s.borderColor.get(),
+						borderWidth: s.borderWidth.get() });
+					break;
+			}
 		}
-
-		// Create the background shape
-
-		if (s.color) {
-			ctx.fillStyle = s.color.get();
-			ctx.fill();
-		}
-		if (s.borderColor && s.borderWidth) {
-			ctx.lineWidth = s.borderWidth.get();
-			ctx.strokeStyle = s.borderColor.get();
-			ctx.stroke();
-		}
-
+		this._shape.draw(ctx, p);
 
 		// Draw the icon
 		if (this._icon) {
@@ -1551,7 +1566,7 @@ export class Element {
 	}
 
 	/** Finds if a point is inside the element */
-	isInside(point) {
+	isInside(x, y) {
 		return false;
 	}
 }
@@ -1578,6 +1593,9 @@ export class Widget {
 		/** Ask for removal of the widget if it is hidden. */
 		this._removeIfHidden = false;
 
+		/** Indicates if the widget has been updated or not. */
+		this._updated = false;
+
 		// Store the given parameters
 		this._name = name;
 		this._parent = parent;
@@ -1592,7 +1610,6 @@ export class Widget {
 			}
 		}
 	}
-
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
@@ -1613,18 +1630,49 @@ export class Widget {
 			this._parent.element.appendChild(el);
 	}
 
-	/** The children widget. */
+	/** The children widgets. */
 	get children() { return this._children; }
 
 	/** The visibility of the widget. */
 	get visibility() { return this._visibility; }
+	set visibility(value) {
+		this._visibility = value;
+		this.updated = false;
+	}
+
+
+	/** Indicates if the Node has been updated or not. */
+	get updated() { return this._updated; }
+	set updated(value) {
+
+		// If the value provided is the same than the current one, do nothing
+		if (this._updated == value)
+			return;
+
+		// Propagate "true" values downwards in the widget hierarchy
+		if (value)
+			this._children.forEach(c => { c._updated = true; });
+
+		// Otherwise, propagate "false" values updwards in the widget hierarchy
+		else if (this._parent)
+			this._parent._updated = false;
+
+		// Apply the new value
+		this._updated = value;
+	}
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Updates the layer.
-	 * @param deltaTime The time since the last call. */
-	update(deltaTime) {
+	/** Updates the Widget.
+	 * @param deltaTime The time since the last call.
+	 * @param forced Indicates wheter to force the update or not. */
+	update(deltaTime, forced = false) {
+
+		// Check if we have to force the update
+		if (this._updated && !forced)
+			return;
+		// console.log("Widget Updated: " + this.name);
 
 		// Create some variables to make the update easier
 		let element = this._element, parent = this._parent;
@@ -1652,21 +1700,18 @@ export class Widget {
 
 		// Update the children
 		for (const child of this._children)
-			child.update(deltaTime);
+			child.update(deltaTime, forced);
+
+		// Mark the widget as updated
+		this.updated = true;
 	}
 
 
 	/** Shows the widget. */
-	show() {
-		this._visibility = 1;
-	}
-
+	show() { this.visibility = 1; }
 
 	/** Hides the widget. */
-	hide() {
-		this._visibility = 0;
-		console.log("Hiding " + this.name);
-	}
+	hide() { this.visibility = 0; }
 
 
 	/** Handles an event.
@@ -1713,6 +1758,43 @@ export class Layer extends Widget {
 
 	/** The viewport the layer belongs to. */
 	get viewport() { return this._viewport; }
+}
+
+
+
+
+
+/** Manages debug panel. */
+export class DebugLayer extends Layer {
+
+	// ------------------------------------------------------------ CONSTRUCTOR
+
+	/** Initializes the DebugLayer instance
+	 * @param viewport The Viewport the layer belongs to. */
+	constructor(viewport) {
+
+		// Call the base class constructor
+		super("Debug", viewport, "div");
+
+		this._FPSValue = 0;
+
+
+		this._FPSLabel = new Label("FPS", this, "FPS: 0");
+		this._FPSLabel.element.className = "ShishoDebugFPSLabel";
+
+	}
+
+	// --------------------------------------------------------- PUBLIC METHODS
+
+	/** Updates the layer.
+	 * @param deltaTime The time since the last call. */
+	update(deltaTime) {
+		if (this._FPSValue != this.viewport.FPS) {
+			this._FPSValue = this.viewport.FPS;
+			this._FPSLabel.text = "FPS: " + this._FPSValue;
+		}
+
+	}
 }
 
 
@@ -1813,11 +1895,9 @@ export class MenuLayer extends Layer {
 	// --------------------------------------------------------- PUBLIC METHODS
 
 	/** Updates the layer.
-	 * @param deltaTime The time since the last call. */
-	update(deltaTime) {
-
-		// Call the base class function
-		super.update(deltaTime);
+	 * @param deltaTime The time since the last call.
+	 * @param forced Indicates wheter to force the update or not. */
+	update(deltaTime, forced = false) {
 
 		// return; // TEMPORAL
 
@@ -1841,9 +1921,8 @@ export class MenuLayer extends Layer {
 			this._elements[elementIndex].draw(ctx);
 		}
 
-
-		// ctx.fillStyle = 'red';
-		// ctx.fillRect(50,50,w/2,h/2);
+		// Call the base class function
+		super.update(deltaTime);
 	}
 }
 
@@ -1902,6 +1981,7 @@ export class Shape {
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
+
 	/** Draws the shape.
 	 * @param ctx The 2D context where to draw the shape. */
 	draw(ctx, position = null, size = null) {
@@ -1935,9 +2015,9 @@ export class Shape {
 
 			// Draw the outline
 			if (this._borderColor && this._borderWidth) {
-				ctx.lineWidth = parseFloat(this._borderWidth);
+				ctx.lineWidth = this._borderWidth;
 				ctx.strokeStyle = this._borderColor;
-				ctx.stroke();
+				ctx.stroke(this._path);
 			}
 		}
 
@@ -1961,19 +2041,63 @@ export class Shape {
 
 
 
-
-export class Rectangle extends Shape {
-
+/** Defines a Circle Shape. */
+export class Circle extends Shape {
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
-	/** Initializes a new Shape instance.
+	/** Initializes a new Circle instance.
 	 * @param data The initialization data. */
 	constructor(data = {}) {
+
+		// Call the base class constructor
 		super(data);
+
+		// Process the initialization data
 		this._radius = data.radius || 0;
+
+		// Update the shape
+		this.update();
+	}
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The radius of the Circle. */
+	get radius() { return this._radius; }
+
+	// --------------------------------------------------------- PUBLIC METHODS
+
+	/** Updates the shape */
+	update() {
+		this._path = new Path2D();
+		this._path.arc(this._x, this._y, this._radius, 0, 2 * Math.PI);
 	}
 }
+
+
+
+/** Defines a (rounded) Rectangle Shape. */
+export class Rectangle extends Shape {
+
+	// ------------------------------------------------------------ CONSTRUCTOR
+
+	/** Initializes a new Rectangle instance.
+	 * @param data The initialization data. */
+	constructor(data = {}) {
+
+		// Call the base class constructor
+		super(data);
+
+		// Process the initialization data
+		this._radius = data.radius || 0;
+	}
+
+	// ------------------------------------------------------ PUBLIC PROPERTIES
+
+	/** The radius of the Rectangle. */
+	get radius() { return this._radius; }
+}
+
 
 
 
@@ -1995,17 +2119,23 @@ export class Viewport {
 		/** The layers of the viewport. */
 		this._layers = {};
 
-		/** The last recorded time. */
-		this._lastTime = 0;
+		/** The last update time. */
+		this._updateTime = 0;
 
 		/** The time since the last update. */
 		this._deltaTime = 0;
 
-		this._FPSTime = 0;
+		/** The current FPS time counter. */
+		this._FPSTimeCounter = 0;
 
-		this._FPSCount = 0;
+		/** The current FPS frame counter. */
+		this._FPSFrameCounter = 0;
 
-		this._FPSValue = 0;
+		/** The last FPS value. */
+		this._FPS = 0;
+
+		/** Indicates whether to force updates or to wait for changes. */
+		this._forcedUpdates = false;
 
 		this._app = app;
 		this._parentElement = params.parentElement || document.body;
@@ -2037,6 +2167,7 @@ export class Viewport {
 			createCssRule(".ShishoWindowButton", "width:max-content; height:max-content; margin: 1vmin;" +
 				"background: blue; color: white; border-radius: 2vmin;" +
 				"font-size: 3vmin; text-align: center; padding: 1vmin;");
+			createCssRule(".ShishoDebugFPSLabel", "font-family: Arial, Helvetica, sans-serif; font-size: 2vmin; color: red");
 		}
 
 		// Create the wrapper for the rest of the elements
@@ -2050,6 +2181,7 @@ export class Viewport {
 		let main = this._layers.main = new MainLayer(this);
 		let menu = this._layers.menu = new MenuLayer(this);
 		let dialog = this.layers.dialog = new DialogLayer(this);
+		let debug = this.layers.debug = new DebugLayer(this);
 
 		document.addEventListener('keyup', (e) => {
 			if (e.ctrlKey && e.code == 'KeyI') {
@@ -2066,6 +2198,7 @@ export class Viewport {
 
 		// Handle the different events by sending them to the different layers
 		function handleEvent(event) {
+
 			// Prevent the default event management
 			event.preventDefault();
 
@@ -2089,9 +2222,9 @@ export class Viewport {
 		document.addEventListener('contextmenu', handleEvent.bind(this));
 
 		// Start updating
-		this.update(0);
+		// this.update(0);
+		requestAnimationFrame(this.update.bind(this));
 	}
-
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
@@ -2107,14 +2240,20 @@ export class Viewport {
 	/** The wrapper element. */
 	get element() { return this._element; }
 
-	/** The time since the last update. */
-	get deltaTime() { return this._deltaTime; }
-
 	/** The width of the viewport. */
 	get width() { return this._element.clientWidth; }
 
 	/** The height of the viewport. */
 	get height() { return this._element.clientHeight; }
+
+	/** The last update time. */
+	get updateTime() { return this._updateTime; }
+
+	/** The time since the last update. */
+	get deltaTime() { return this._deltaTime; }
+
+	/** The time since the last update. */
+	get FPS() { return this._FPS; }
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
@@ -2122,30 +2261,27 @@ export class Viewport {
 	 * @param time The current time (milliseconds from beginning). */
 	update(time = 0) {
 
+		// Calculate the current delta time
 		let timeInSeconds = (time > 0) ? time / 1000 : 0.001;
-		this._deltaTime = timeInSeconds - this._lastTime;
-		this._lastTime = timeInSeconds;
-		if (this._deltaTime > 0.1)
-			this._deltaTime = 0.1;
+		this._deltaTime = timeInSeconds - this._updateTime;
+		this._updateTime = timeInSeconds;
 		if (this._deltaTime > 0.1)
 			this._deltaTime = 0.1;
 
-		// Calculate the 
-		this._FPSTime += this._deltaTime;
-		this._FPSCount++;
-		if (this._FPSTime > 1) {
-			this._FPSTime -= 1;
-			this._FPSValue = this._FPSCount;
-			this._FPSCount = 0;
-			console.log(this._FPSValue);
+		// Calculate the Frames Per Second
+		this._FPSTimeCounter += this._deltaTime;
+		this._FPSFrameCounter++;
+		if (this._FPSTimeCounter > 1) {
+			this._FPSTimeCounter -= 1;
+			this._FPS = this._FPSFrameCounter;
+			this._FPSFrameCounter = 0;
 		}
 
-
+		// Update the layers
 		for (const layer in this._layers) {
-			this._layers[layer].update(this._deltaTime);
+			this._layers[layer].update(this._deltaTime, this._forcedUpdates);
 		}
 
-		// console.log(time);
 
 		// Try to redraw as soon as possible
 		requestAnimationFrame(this.update.bind(this));
@@ -2522,6 +2658,7 @@ export class FileInput extends Widget {
 
 
 
+
 /** Defines a Graph. */
 export class Graph extends Widget {
 
@@ -2535,25 +2672,27 @@ export class Graph extends Widget {
 		// Call the base class constructor
 		super(name, parent, createElement("canvas", parent.element, parent.name + "Canvas"));
 
-		/** The translation vector. */
-		this._translateX = 0;
+		/** The horizontal position of the virtual camera. */
+		this._x = 0;
 
-		this._translateY = 0;
+		/** The vertical position of the virtual camera. */
+		this._y = 0;
 
-		/** The zoom level. */
-		this._zoom = 0;
+		/** The zoom factor of the virtual camera. */
+		this._zoom = 1;
 
-		/** The scale factor. */
-		this._scale = 1;
+		/** The zoom level of the virtual camera. */
+		this._zoomLevel = 0;
 
-		/** The elements to draw. */
+		/** The elements of the graph. */
 		this._elements = {};
 
 		// Create the canvas for the layer
 		this._canvas = this._element;
 		this._context = this._canvas.getContext('2d');
 
-		this._basicStyle = new Style(null, null, { "name": "simple",
+		this._basicStyle = new Style(null, null, {
+			"name": "simple",
 			shape: "circle", radius: "50",
 			color: [255, 255, 255], border_width: "2", border_color: [0, 0, 255],
 			text_color: [0, 0, 0], text_font: "Arial", text_size: "16px"
@@ -2561,26 +2700,39 @@ export class Graph extends Widget {
 
 	}
 
+
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
-	/** The elements of the layer. */
-	// get elements(): Element[] { return this._elements; }
 
-	set zoom(value) {
+	/** The horizontal position of the virtual camera. */
+	get x() { return this._x; }
+	set x(value) { this._x = value; this.updated = false; }
 
-	}
+	/** The vertical position of the virtual camera. */
+	get y() { return this._y; }
+	set y(value) { this._y = value; this.updated = false; }
+
+	/** The zoom factor of the virtual camera. */
+	get zoom() { return this._zoom; }
+	set zoom(value) { this._zoom = value; this.updated = false; }
+
+	/** The zoom level of the virtual camera. */
+	get zoomLevel() { return this._zoomLevel; }
+	set zoomLevel(value) { this._zoomLevel = value; this.updated = false; }
+
+	/** The elements of the graph. */
+	get elements() { return this._elements; }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
 	/** Updates the widget.
 	 * @param deltaTime The time since the last call. */
-	update(deltaTime) {
+	update(deltaTime, forced) {
 
-		// Call the base class function
-		super.update(deltaTime);
-
-		// return; // TEMPORAL
+		// Check if we have to force the update
+		if (this._updated && !forced)
+			return;
 
 		// Get the canvas properties
 		let canvas = this._canvas, ctx = this._context;
@@ -2593,8 +2745,8 @@ export class Graph extends Widget {
 
 		// Translate and scale the graph
 		ctx.translate(w / 2, h / 2);
-		ctx.scale(this._scale, this._scale);
-		ctx.translate(this._translateX, this._translateY);
+		ctx.scale(this._zoom, this._zoom);
+		ctx.translate(this._x, this._y);
 
 		// DEBUG: Draw the origin point
 		ctx.strokeStyle = 'red';
@@ -2615,17 +2767,32 @@ export class Graph extends Widget {
 		for (const relation of o.relations.children) {
 			let origin = o.classes[relation.origin.value].positions.children[0];
 			let target = o.classes[relation.target.value].positions.children[0];
-
-			ctx.strokeStyle = 'grey';
+			let textPosX, textPosY;
 			ctx.beginPath();
 			ctx.moveTo(origin.x, origin.y);
-			ctx.lineTo(target.x, target.y);
+
+			if (relation.midpoint.x != undefined) {
+				let midpoint = relation.midpoint;
+				let c = this.fitCircleToPoints(origin.x, origin.y, midpoint.x, midpoint.y, target.x, target.y);
+				let ang1 = Math.atan2(origin.y - c.y, origin.x - c.x);
+				let ang2 = Math.atan2(target.y - c.y, target.x - c.x);
+				ctx.arc(c.x, c.y, c.radius, ang1, ang2, c.CCW);
+				textPosX = midpoint.x;
+				textPosY = midpoint.y;
+			}
+			else {
+				textPosX = (origin.x + target.x) / 2;
+				textPosY = (origin.y + target.y) / 2;
+				ctx.lineTo(target.x, target.y);
+			}
+
+			ctx.strokeStyle = 'lightgrey';
 			ctx.stroke();
 			ctx.fillStyle = "black";
 			ctx.textAlign = "center";
 			ctx.textBaseline = "middle";
 			ctx.font = "Arial 12px";
-			ctx.fillText(relation.name.value, (origin.x + target.x) / 2, (origin.y + target.y) / 2);
+			ctx.fillText(relation.name.value, textPosX, textPosY);
 		}
 
 		// Create the elements to draw
@@ -2636,6 +2803,35 @@ export class Graph extends Widget {
 			this._elements[className] = element;
 			element.draw(ctx);
 		}
+
+		// Create the Arrows
+		for (const relation of o.relations.children) {
+			let origin = o.classes.get(relation.origin.value);
+			let target = o.classes.get(relation.target.value);
+			let originPos = origin.positions.children[0];
+			let targetPos = target.positions.children[0];
+
+			if (relation.midpoint.x != undefined) {
+				originPos = relation.midpoint;
+			}
+
+			let elem = this._elements[origin.name.value];
+			let distance = 0;
+			if (elem.shape.radius)
+				distance = elem.shape.radius;
+
+			// Create the three vertices of an arrow
+			let arrowPoints = this.calculateArrow(originPos, targetPos, distance, 16);
+			ctx.beginPath();
+			ctx.fillStyle = "lightgrey";
+			ctx.moveTo(arrowPoints[0].x, arrowPoints[0].y);
+			ctx.lineTo(arrowPoints[1].x, arrowPoints[1].y);
+			ctx.lineTo(arrowPoints[2].x, arrowPoints[2].y);
+			ctx.fill();
+		}
+
+		// Call the base class function
+		super.update(deltaTime, forced);
 
 	}
 
@@ -2649,26 +2845,26 @@ export class Graph extends Widget {
 			case 'pointermove':
 				let pointerEvent = event;
 				if (pointerEvent.buttons == 1 || pointerEvent.buttons == 2) {
-					this._translateX += pointerEvent.movementX / this._scale;
-					this._translateY += pointerEvent.movementY / this._scale;
-					// console.log(e.movementX + "," + e.movementY);
+					this._x += pointerEvent.movementX / this._zoom;
+					this._y += pointerEvent.movementY / this._zoom;
+					this.updated = false;
 				}
 				break;
 			case 'wheel':
 				let wheelEvent = event;
 
 				// Get the point where the user is performing the action
-				let c = this._canvas, w = c.width, h = c.height, x = wheelEvent.clientX - w / 2, y = wheelEvent.clientY - h / 2, previousScale = this._scale;
+				let c = this._canvas, w = c.width, h = c.height, x = wheelEvent.clientX - w / 2, y = wheelEvent.clientY - h / 2, previousScale = this._zoom;
 
 				// Calculate the new zoom level and scale factor
-				let zoomDelta = ((wheelEvent.deltaY < 0) ? 1 : -1);
-				this._zoom += zoomDelta;
-				this._scale = Math.pow(1.5, this._zoom);
-				console.log('Zoom: ' + (this._scale * 100).toFixed(0) + '%');
+				this._zoomLevel += ((wheelEvent.deltaY < 0) ? 1 : -1);
+				this._zoom = Math.pow(1.5, this._zoomLevel);
+				console.log('Zoom: ' + (this._zoom * 100).toFixed(0) + '%');
 
 				// Transform the location between both scales
-				this._translateX += -x / previousScale + x / this._scale;
-				this._translateY += -y / previousScale + y / this._scale;
+				this._x += -x / previousScale + x / this._zoom;
+				this._y += -y / previousScale + y / this._zoom;
+				this.updated = false;
 
 				break;
 
@@ -2680,7 +2876,13 @@ export class Graph extends Widget {
 				break;
 
 			case 'dblclick':
-				alert("[TODO: Show description of element here]");
+
+
+				// for (let elementName in this._elements) {
+				// 	let element = this._elements[elementName];
+				// 	if
+				// }
+
 				break;
 
 			// If it is not one of those do not capture the event
@@ -2688,6 +2890,58 @@ export class Graph extends Widget {
 		}
 		// Capture the event
 		return true;
+	}
+
+
+	// -------------------------------------------------------- PRIVATE METHODS
+
+	fitCircleToPoints(x1, y1, x2, y2, x3, y3) {
+		var x, y, u;
+		const slopeA = (x2 - x1) / (y1 - y2); // slope of vector from point 1 to 2
+		const slopeB = (x3 - x2) / (y2 - y3); // slope of vector from point 2 to 3
+		if (slopeA === slopeB) {
+			return;
+		} // Slopes are same thus 3 points form striaght line. No circle can fit.
+		if (y1 === y2) { // special case with points 1 and 2 have same y 
+			x = ((x1 + x2) / 2);
+			y = slopeB * x + (((y2 + y3) / 2) - slopeB * ((x2 + x3) / 2));
+		}
+		else if (y2 === y3) { // special case with points 2 and 3 have same y 
+			x = ((x2 + x3) / 2);
+			y = slopeA * x + (((y1 + y2) / 2) - slopeA * ((x1 + x2) / 2));
+		}
+		else {
+			x = ((((y2 + y3) / 2) - slopeB * ((x2 + x3) / 2)) - (u = ((y1 + y2) / 2) - slopeA * ((x1 + x2) / 2))) / (slopeA - slopeB);
+			y = slopeA * x + u;
+		}
+
+		return {
+			x, y,
+			radius: Math.pow((Math.pow((x1 - x), 2) + Math.pow((y1 - y), 2)), 0.5),
+			CCW: ((x3 - x1) * (y2 - y1) - (y3 - y1) * (x2 - x1)) >= 0,
+		};
+	}
+
+
+	calculateArrow(origin, target, distance, size) {
+
+		let ax = origin.x - target.x, ay = origin.y - target.y;
+		let l = Math.sqrt(ax * ax + ay * ay);
+		ax /= l;
+		ay /= l; // Divide by the length to obtain the unitary vector
+		let bx = ay, by = -ax; // Simple 90 degree rotation 
+
+		let cx = target.x + (ax * distance);
+		let cy = target.y + (ay * distance);
+		let dx = cx + (ax * size);
+		let dy = cy + (ay * size);
+		let hz = size / 2; // The horizontal size of the arrow
+
+		// Create the three verices of the arrow
+		return [new Vector(null, null, [cx, cy]),
+			new Vector(null, null, [dx + (bx * hz), dy + (by * hz)]),
+			new Vector(null, null, [dx - (bx * hz), dy - (by * hz)]),
+		];
 	}
 }
 

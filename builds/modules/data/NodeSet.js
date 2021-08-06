@@ -33,5 +33,9 @@ export class NodeSet extends Node {
 			this[key] = node;
 		}
 	}
+
+	/** Gets a specific Node in the collection.
+	 * @param name The name of the node to get. */
+	get(name) { return this[name]; }
 }
 

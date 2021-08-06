@@ -3,7 +3,7 @@ import { Layer } from "./Layer";
 /** Defines a interactive element. */
 export class Widget {
 
-	// --------------------------------------------------------- PRIVATE FIELDS
+	// ------------------------------------------------------- PROTECTED FIELDS
 
 	/** The name of the widget. */
 	protected _name: string;
@@ -23,6 +23,8 @@ export class Widget {
 	/** Ask for removal of the widget if it is hidden. */
 	protected _removeIfHidden = false;
 
+	/** Indicates if the widget has been updated or not. */
+	protected _updated = false;
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
@@ -40,11 +42,32 @@ export class Widget {
 		if (el && this._parent.element) this._parent.element.appendChild(el);
 	}
 
-	/** The children widget. */
+	/** The children widgets. */
 	get children() : Widget[] { return this._children; }
 
 	/** The visibility of the widget. */
 	get visibility(): number { return this._visibility; }
+	set visibility(value: number) { 
+		this._visibility = value; this.updated = false;
+	}
+	
+
+	/** Indicates if the Node has been updated or not. */
+	get updated(): boolean { return this._updated; }
+	set updated(value: boolean) {
+		
+		// If the value provided is the same than the current one, do nothing
+		if (this._updated == value) return;
+
+		// Propagate "true" values downwards in the widget hierarchy
+		if (value) this._children.forEach(c => { c._updated = true; });
+
+		// Otherwise, propagate "false" values updwards in the widget hierarchy
+		else if(this._parent) this._parent._updated = false;
+			
+		// Apply the new value
+		this._updated = value
+	}
 
 
 	// ------------------------------------------------------------ CONSTRUCTOR
@@ -71,10 +94,15 @@ export class Widget {
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Updates the layer. 
-	 * @param deltaTime The time since the last call. */
-	public update(deltaTime) {
+	/** Updates the Widget. 
+	 * @param deltaTime The time since the last call. 
+	 * @param forced Indicates wheter to force the update or not. */
+	public update(deltaTime, forced = false) {
 
+		// Check if we have to force the update
+		if (this._updated && !forced) return;
+		// console.log("Widget Updated: " + this.name);
+		
 		// Create some variables to make the update easier
 		let element = this._element, parent = this._parent;
 
@@ -98,21 +126,18 @@ export class Widget {
 		if (this._visibility <= 0) return;
 
 		// Update the children
-		for(const child of this._children) child.update(deltaTime);
+		for(const child of this._children) child.update(deltaTime, forced);
+
+		// Mark the widget as updated
+		this.updated = true;
 	}
 	
 
 	/** Shows the widget. */
-	show() {
-		this._visibility = 1;
-	}
-
+	show() { this.visibility = 1; }
 
 	/** Hides the widget. */
-	hide() { 
-		this._visibility = 0;
-		console.log("Hiding " + this.name);
-	}
+	hide() { this.visibility = 0; }
 
 
 	/** Handles an event.

@@ -53,6 +53,7 @@ export class Shape {
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
+
 	/** Draws the shape.
 	 * @param ctx The 2D context where to draw the shape. */
 	draw(ctx, position = null, size = null) {
@@ -86,9 +87,9 @@ export class Shape {
 
 			// Draw the outline
 			if (this._borderColor && this._borderWidth) {
-				ctx.lineWidth = parseFloat(this._borderWidth);
+				ctx.lineWidth = this._borderWidth;
 				ctx.strokeStyle = this._borderColor;
-				ctx.stroke();
+				ctx.stroke(this._path);
 			}
 		}
 
