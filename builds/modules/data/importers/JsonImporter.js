@@ -14,6 +14,6 @@ export class JsonImporter {
 		let jsonData = JSON.parse(data);
 
 		// deserialize the JSON data
-		root.deserialize(jsonData, combine);
+		root.deserialize(jsonData, "combine");
 	}
 }

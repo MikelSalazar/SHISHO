@@ -1,5 +1,5 @@
 import { Ontology } from "../../data/model/Ontology";
-import { Vector } from "../../data/types/Vector";
+import { Vector } from "../../data/types/complex/Vector";
 import { Layer } from "../Layer";
 import { Element } from "../Element";
 import { Style } from "../../data/model/Style";
@@ -120,26 +120,29 @@ export class Graph extends Widget {
 		ctx.fillStyle = 'black'; ctx.font = "16px Arial";
 		ctx.textAlign = 'center'; ctx.textBaseline = "middle";
 
-		// Draw the connectors for the realtionships
-		for (const relation of o.relations.children) {
-			let origin = o.classes[relation.origin.value].positions.children[0];
-			let target = o.classes[relation.target.value].positions.children[0];
-			let textPosX, textPosY;
+		// Draw the connectors for the relationships
+		for (const relation of o.relations.typedChildren) {
+			let origin : Class = o.classes.get(relation.origin.value);
+			let target : Class = o.classes.get(relation.target.value);
+			let originPos = origin.positions.getIndex(0);
+			let targetPos = target.positions.getIndex(0);
+			let originX = originPos.x.get(), originY = originPos.y.get();
+			let targetX = targetPos.x.get(), targetY = targetPos.y.get();
 			ctx.beginPath();
-			ctx.moveTo(origin.x, origin.y);
-
-			if (relation.midpoint.x != undefined)  {
+			ctx.moveTo(originX, originY);
+			let textPosX, textPosY;
+			if (relation.midpoint.x.get() != undefined)  {
 				let midpoint = relation.midpoint;
-				let c = this.fitCircleToPoints(origin.x, origin.y, 
-					midpoint.x, midpoint.y, target.x, target.y);
-				let ang1 = Math.atan2(origin.y - c.y, origin.x - c.x);
-				let ang2 = Math.atan2(target.y - c.y, target.x- c.x);
+				let c = this.fitCircleToPoints(originX, originY, 
+					midpoint.x, midpoint.y, targetX, targetY);
+				let ang1 = Math.atan2(originY - c.y, originX - c.x);
+				let ang2 = Math.atan2(targetY - c.y, targetX - c.x);
 				ctx.arc(c.x, c.y, c.radius, ang1, ang2, c.CCW);
 				textPosX = midpoint.x; textPosY = midpoint.y;
 			} else {
-				textPosX = (origin.x+ target.x)/2;
-				textPosY = (origin.y+ target.y)/2;
-				ctx.lineTo(target.x, target.y);
+				textPosX = (originX+ targetX)/2;
+				textPosY = (originY+ targetY)/2;
+				ctx.lineTo(targetX, targetY);
 			}
 
 			ctx.strokeStyle = 'lightgrey';
@@ -152,22 +155,23 @@ export class Graph extends Widget {
 
 		// Create the elements to draw
 		this._elements = {};
-		for (const c of o.classes.children) {
+
+		for (const c of o.classes) {
 			let className = c.name.value;
-			let element = new Element(className, c.positions.children[0],
+			let element = new Element(className, c.positions.getIndex(0),
 				[this._basicStyle], className);
 			this._elements[className] = element;
 			element.draw(ctx);
 		}
 
 		// Create the Arrows
-		for (const relation of o.relations.children) {
+		for (const relation of o.relations) {
 			let origin : Class = o.classes.get(relation.origin.value);
 			let target : Class = o.classes.get(relation.target.value);
-			let originPos = origin.positions.children[0];
-			let targetPos = target.positions.children[0];
+			let originPos = origin.positions.getIndex(0);
+			let targetPos = target.positions.getIndex(0);
 
-			if (relation.midpoint.x != undefined)  {
+			if (relation.midpoint.x.get() != undefined)  {
 				originPos = relation.midpoint;
 			}
 
@@ -179,9 +183,9 @@ export class Graph extends Widget {
 			let arrowPoints = this.calculateArrow(originPos, targetPos, distance, 16);
 			ctx.beginPath();
 			ctx.fillStyle = "lightgrey";
-			ctx.moveTo(arrowPoints[0].x, arrowPoints[0].y);
-			ctx.lineTo(arrowPoints[1].x, arrowPoints[1].y);
-			ctx.lineTo(arrowPoints[2].x, arrowPoints[2].y);
+			ctx.moveTo(arrowPoints[0].x.get(), arrowPoints[0].y.get());
+			ctx.lineTo(arrowPoints[1].x.get(), arrowPoints[1].y.get());
+			ctx.lineTo(arrowPoints[2].x.get(), arrowPoints[2].y.get());
 			ctx.fill();
 		}
 
@@ -278,16 +282,17 @@ export class Graph extends Widget {
 
 	private calculateArrow (origin, target, distance, size) : Vector[] {
 
-		let ax = origin.x - target.x , ay = origin.y - target.y;
+		let ax = origin.x.get() - target.x.get(), 
+			ay = origin.y.get() - target.y.get();
 		let l = Math.sqrt(ax * ax + ay * ay)
 		ax /= l; ay /= l; // Divide by the length to obtain the unitary vector
 		let bx = ay, by = -ax;	// Simple 90 degree rotation 
 
-		let cx = target.x + (ax * distance);
-		let cy = target.y + (ay * distance);
+		let cx = target.x.get() + (ax * distance);
+		let cy = target.y.get() + (ay * distance);
 		let dx = cx + (ax * size);
 		let dy = cy + (ay * size);
-		let hz =  size/2; // The horizontal size of the arrow
+		let hz = size/2; // The horizontal size of the arrow
 
 		// Create the three verices of the arrow
 		return [new Vector(null, null, [cx, cy]),

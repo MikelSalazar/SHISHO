@@ -121,6 +121,7 @@ for (fileIndex = 0; fileIndex < fileCount; fileIndex++) {
 // Reorder the files paths in case there is a class that extends another
 let orderedFilePaths = [mainFileName +  '.ts']; // Put the main file fist
 function checkClassOrder(className) {
+	if (!codebase[className]) throw Error("Unknown class: " + className);
 	if (codebase[className].extends) // The extended class must come before
 		checkClassOrder(codebase[className].extends);
 	if (!orderedFilePaths.includes(codebase[className].filePath))

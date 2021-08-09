@@ -2,7 +2,7 @@ import { Root } from "../model/Root";
 import { Ontology } from "../model/Ontology";
 import { Class } from "../model/Class";
 import { Relation } from "../model/Relation";
-import { Vector } from "../types/Vector";
+import { Vector } from "../types/complex/Vector";
 
 /** Manages the importation of ontologies from OWL files. */
 export class OwlImporter {

@@ -1,6 +1,6 @@
 import { Class } from "../model/Class.js";
 import { Relation } from "../model/Relation.js";
-import { Vector } from "../types/Vector.js";
+import { Vector } from "../types/complex/Vector.js";
 
 /** Manages the importation of ontologies from OWL files. */
 export class OwlImporter {

@@ -33,24 +33,14 @@ export class Ontology extends Node {
 	constructor(nodeName?: string, root?: Root, data?: any) {
 		
 		// Call the base class constructor
-		super(nodeName || "ontology", root, data);
+		super("ontology", nodeName, root, data);
 
 		// Initialize the child nodes
 		this._classes = new NodeSet<Class>("classes", this, Class);
-		this._relations = new NodeSet<Relation>("relation", this, Relation);
+		this._relations = new NodeSet<Relation>("relations", this, Relation);
 
 		// Deserialize the initialization data
-		if (data != undefined) this.deserialize(data);
+		if (data) this.deserialize(data);
 	}
 
-
-	// --------------------------------------------------------- PUBLIC METHODS
-
-	/** Deserializes the Ontology instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data: any = {}, combine = true) {
-		if (data.classes) this._classes.deserialize(data.classes);
-		if (data.relations) this._relations.deserialize(data.relations);
-1	}
 }

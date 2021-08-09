@@ -4,55 +4,62 @@ import { Node } from "../Node.js";
 export class Number extends Node {
 
 
-	// ------------------------------------------------------------ CONSTRUCTOR
+	// ----------------------------------------------------- PUBLIC CONSTRUCTOR
 
 	/** Initializes a new instance of the Number class.
 	 * @param nodeName The name of the Node.
 	 * @param nodeParent The parent Node.
-	 * @param data The initialization data. */
-	constructor(nodeName, nodeParent, data) {
+	 * @param nodeData The initialization data. */
+	constructor(nodeName, nodeParent, nodeData) {
 
-		// Call the base class nada
-		super(nodeName || "string", nodeParent, data);
+		// Call the parent class constructor
+		super("number", nodeName, nodeParent, nodeData);
 
-		// Initialize the value
+		// --------------------------------------------------------- PRIVATE FIELDS
+
+		/** The current value of the Number.*/
 		this._value = undefined;
 
+		/** The default value of the Number. .*/
+		this._default = undefined;
+
 		// Deserialize the initialization data
-		if (data != undefined)
-			this.deserialize(data);
+		if (nodeData)
+			this.deserialize(nodeData);
 	}
 
 
-	// ------------------------------------------------------ PUBLIC PROPERTIES
+	// ------------------------------------------------------- PUBLIC ACCESSORS
 
-	/** The value of the Number. */
+	/** The current value of the Number.*/
 	get value() { return this._value; }
-	set value(value) {
-		// Ift he value is different, mark the node for update
-		if (this.value != value)
+	set value(v) {
+		if (this._value != v)
 			this.nodeUpdated = false;
-
-		// Set the new value
-		this._value = value;
+		this._value = v;
 	}
+
+	/** Gets the default value of the Number. */
+	get default() { return this._default; }
+	set default(newDefault) { this._default = newDefault; }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Serializes the instance.
+	/** Serializes the Number instance.
 	 * @return The serialized data. */
 	serialize() { return this._value; }
 
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data, combine = true) {
-		if (data == null)
-			this.value = 0;
-		else if (typeof data == "number")
+	/** Deserializes the Number instance.
+	 * @param data The data to deserialize.
+	 * @param mode The deserialization mode. */
+	deserialize(data, mode) {
+		if (data == undefined)
+			this.value = undefined;
+		else if (typeof data !== "number")
+			this.value = parseFloat(data);
+		else
 			this.value = data;
 	}
 }
-

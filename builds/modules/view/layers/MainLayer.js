@@ -7,7 +7,7 @@ export class MainLayer extends Layer {
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
-	/** Initializes the GraphLayer instance
+	/** Initializes the MainLayer instance
 	 * @param viewport The Viewport the layer belongs to. */
 	constructor(viewport) {
 

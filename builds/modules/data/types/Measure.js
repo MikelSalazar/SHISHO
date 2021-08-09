@@ -1,72 +1,120 @@
 import { Node } from "../Node.js";
-import { Number } from "./Number.js";
-import { String } from "./String.js";
 
-/** Defines a Measure. */
+/** Defines a numeric Measure Node. */
 export class Measure extends Node {
 
 
-	// ------------------------------------------------------------ CONSTRUCTOR
+	// ----------------------------------------------------- PUBLIC CONSTRUCTOR
 
-	/** Initializes a new instance of the vector class.
+	/** Initializes a new instance of the Measure class.
+	 * @param nodeType The type of the Node.
 	 * @param nodeName The name of the Node.
 	 * @param nodeParent The parent Node.
-	 * @param data The initialization data. */
-	constructor(nodeName, nodeParent, data) {
+	 * @param nodeData The initialization data. */
+	constructor(nodeType, nodeName, nodeParent, nodeData) {
 
-		// Call the base class constructor
-		super(nodeName || "measure", nodeParent, data);
+		// Call the parent class constructor
+		super(nodeType || "measure", nodeName, nodeParent, nodeData);
 
-		// Initialize the child nodes
-		this._quantity = new Number("quantity", this);
-		this._unit = new String("unit", this);
+		// --------------------------------------------------------- PRIVATE FIELDS
+
+		/** The current value of the Measure.*/
+		this._value = undefined;
+
+		/** The minimum possible value of Measure. */
+		this._min = Number.NEGATIVE_INFINITY;
+
+		/** The maximum possible value of the Measure. */
+		this._max = Number.POSITIVE_INFINITY;
+
+		/** The default value of the Measure. .*/
+		this._default = 0;
+
+		/** The measurement unit of the Measure. */
+		this._unit = undefined;
 
 		// Deserialize the initialization data
-		if (data != undefined)
-			this.deserialize(data);
+		if (nodeData)
+			this.deserialize(nodeData);
 	}
 
 
-	// ------------------------------------------------------ PUBLIC PROPERTIES
+	// ------------------------------------------------------- PUBLIC ACCESSORS
 
-	/** The numeric value of the Measure. */
-	get quantity() { return this._quantity; }
+	/** The current value of the Measure.*/
+	get value() { return this._value; }
+	set value(newValue) {
+		if (this._value != newValue)
+			this.nodeUpdated = false;
+		if (newValue == undefined)
+			newValue = this._default;
+		if (newValue < this._min)
+			this._value = this._min;
+		else if (newValue > this._max)
+			this._value = this._max;
+		else
+			this._value = newValue;
+		this.nodeUpdated = false;
+	}
 
-	/** The type of unit of the Measure. */
+
+	/** The minimum possible value of Measure. */
+	get min() { return this._min; }
+	set min(newMin) {
+		if (newMin > this._max)
+			this._max = newMin;
+		if (this._value && newMin > this._value)
+			this.value = newMin;
+		this._min = newMin;
+		this.nodeUpdated = false;
+	}
+
+
+	/** The maximum possible value of the Measure. */
+	get max() { return this._max; }
+	set max(newMax) {
+		if (newMax < this._min)
+			this._min = newMax;
+		if (this._value && this._value)
+			this.value = newMax;
+		this._max = newMax;
+		this.nodeUpdated = false;
+	}
+
+
+	/** The default value of the Measure. */
+	get default() { return this._default; }
+	set default(newDefault) {
+		this._default = newDefault;
+		this.nodeUpdated = false;
+	}
+
+
+	/** Gets the measurement unit of the Measure. */
 	get unit() { return this._unit; }
+	set unit(newUnit) {
+		this._unit = newUnit;
+		this.nodeUpdated = false;
+	}
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data, combine = true) {
-		if (typeof data == "number")
-			this._quantity.value = data;
-		else if (typeof data == "string")
-			this._quantity.value = parseInt(data);
-		// Get the different values
-		else {
-			if (data.quantity != undefined)
-				this.quantity.value = data.quantity;
-			if (data.unit != undefined)
-				this.unit.value = data.unit;
-		}
-	}
+	/** Serializes the Number instance.
+	 * @return The serialized data. */
+	serialize() { return this._value; }
 
 
-	/** Sets the values of the Measure.
-	 * @param quantity The numeric value of the Measure.
-	 * @param unit The type of unit of the Measure. */
-	set(quantity, unit) {
-		this.quantity.value = quantity;
-		this.unit.value = unit;
+	/** Deserializes the Number instance.
+	 * @param data The data to deserialize.
+	 * @param mode The deserialization mode. */
+	deserialize(data, mode) {
+		if (typeof data !== "number")
+			data = parseFloat(data);
+		this.value = data;
 	}
 
-	/** Gets the actula numeric value. */
-	get() {
-		return this.quantity.value;
-	}
+	/** Obtains the calculate value.
+	 * @returns The calculated value; */
+	get() { return this.value; }
 }
-

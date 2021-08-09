@@ -1,7 +1,8 @@
 import { Node } from "../Node";
-import { Color } from "../types/Color";
 import { String } from "../types/String";
-import { Measure } from "../types/Measure";
+import { Color } from "../types/complex/Color";
+import { Distance } from "../types/measures/Distance";
+import { Size } from "../types/measures/Size";
 import { Root } from "./Root";
 
 /** Defines a visual Style. */
@@ -19,16 +20,16 @@ export class Style extends Node {
 	private _shape: String;
 
 	/** The width of the shape. */
-	private _width: Measure;
+	private _width: Distance;
 
 	/** The height of the shape. */
-	private _height: Measure;
+	private _height: Distance;
 
 	/** The radius of the shape. */
-	private _radius: Measure;
+	private _radius: Distance;
 
 	/** The second radius of the shape. */
-	private _radius2: Measure;
+	private _radius2: Distance;
 
 	/** The color of the style. */
 	private _color: Color;
@@ -37,13 +38,13 @@ export class Style extends Node {
 	private _borderColor: Color;
 
 	/** The width of the border. */
-	private _borderWidth: Measure;
+	private _borderWidth: Distance;
 
 	/** The font of the text. */
 	private _textFont: String;
 
 	/** The size of the text. */
-	private _textSize: Measure;
+	private _textSize: Distance;
 
 	/** The horizontal and vertical alignment of the text. */
 	private _textAlign: String;
@@ -58,13 +59,13 @@ export class Style extends Node {
 	private _iconColor: Color;
 
 	/** The icon size of the shape. */
-	private _iconSize: Measure;
+	private _iconSize: Distance;
 
 	/** The icon offset X of the shape. */
-	private _iconOffsetX: Measure;
+	private _iconOffsetX: Distance;
 
 	/** The icon offset Y of the shape. */
-	private _iconOffsetY: Measure;
+	private _iconOffsetY: Distance;
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
@@ -78,16 +79,16 @@ export class Style extends Node {
 	get shape(): String { return this._shape; }
 
 	/** The width of the shape. */
-	get width(): Measure { return this._width; }
+	get width(): Size { return this._width; }
 
 	/** The height of the shape. */
-	get height(): Measure { return this._height; }
+	get height(): Size { return this._height; }
 
 	/** The radius of the shape. */
-	get radius(): Measure { return this._radius; }
+	get radius(): Size { return this._radius; }
 
 	/** The secondary radius of the shape. */
-	get radius2(): Measure { return this._radius2; }
+	get radius2(): Size { return this._radius2; }
 
 	/** The color of the style. */
 	get color(): Color { return this._color; }
@@ -98,13 +99,13 @@ export class Style extends Node {
 	set borderColor(value: Color) { this._borderColor = value; }
 
 	/** The width of the border. */
-	get borderWidth(): Measure { return this._borderWidth; }
+	get borderWidth(): Size { return this._borderWidth; }
 
 	/** The font of the text. */
 	get textFont(): String { return this._textFont; }
 
 	/** The size of the text. */
-	get textSize(): Measure { return this._textSize; }
+	get textSize(): Size { return this._textSize; }
 
 	/** The horizontal and vertical alignment of the text. */
 	get textAlign(): String { return this._textAlign; }
@@ -119,13 +120,13 @@ export class Style extends Node {
 	get iconColor(): Color { return this._iconColor; }
 
 	/** The icon size of the style. */
-	get iconSize(): Measure { return this._iconSize; }
+	get iconSize(): Size { return this._iconSize; }
 
 	/** The icon offset X of the style. */
-	get iconOffsetX(): Measure { return this._iconOffsetX; }
+	get iconOffsetX(): Distance { return this._iconOffsetX; }
 
 	/** The icon offset X of the style. */
-	get iconOffsetY(): Measure { return this._iconOffsetY; }
+	get iconOffsetY(): Distance { return this._iconOffsetY; }
 
 
 	// ------------------------------------------------------------ CONSTRUCTOR
@@ -136,65 +137,35 @@ export class Style extends Node {
 	constructor(nodeName?: string, root?: Root, data?: any) {
 				
 		// Call the base class constructor
-		super(nodeName || "style", root, data);
+		super("style", nodeName, root, data);
 
 		// Initialize the child nodes
 		this._name = new String("name", this);
-		this._parent = new String("parent", this);
+		this._nodeParent = new String("parent", this);
 
 		this._shape = new String("shape", this);
-		this._width = new Measure("width", this);
-		this._height = new Measure("height", this);
-		this._radius = new Measure("radius", this);
-		this._radius2 = new Measure("radius2", this);
+		this._width = new Size("width", this);
+		this._height = new Size("height", this);
+		this._radius = new Size("radius", this);
+		this._radius2 = new Size("radius2", this);
 
 		this._color = new Color("color", this);
 		this._borderColor = new Color("border_color", this);
-		this._borderWidth = new Measure("border_width", this);
+		this._borderWidth = new Size("border_width", this);
 
 		this._textFont = new String("text_font", this);
-		this._textSize = new Measure("text_size", this);
+		this._textSize = new Size("text_size", this);
 		this._textAlign = new String("text_align", this);
 		this._textColor = new Color("text_color", this);
 
 		this._icon = new String("icon", this);
 		this._iconColor = new Color("icon_color", this);
-		this._iconSize = new Measure("icon_size", this);
-		this._iconOffsetX = new Measure("icon_offset_x", this);
-		this._iconOffsetY = new Measure("icon_offset_y", this);
+		this._iconSize = new Size("icon_size", this);
+		this._iconOffsetX = new Distance("icon_offset_x", this);
+		this._iconOffsetY = new Distance("icon_offset_y", this);
 
 		// Deserialize the initialization data
 		if (data != undefined) this.deserialize(data);
-	}
-
-
-	// --------------------------------------------------------- PUBLIC METHODS
-	
-	/** Deserializes the Style instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data: any = {}, combine = true) {
-
-		// Deserialize the properties of the class
-		if (data.name != undefined) this._name.deserialize(data.shape);
-		if (data.parent != undefined) this._parent.deserialize(data.parent);
-		if (data.shape != undefined) this._shape.deserialize(data.shape);
-		if (data.width != undefined) this._width.deserialize(data.width);
-		if (data.height != undefined) this._height.deserialize(data.height);
-		if (data.radius != undefined) this._radius.deserialize(data.radius);
-		if (data.radius2 != undefined) this._radius2.deserialize(data.radius2);
-		if (data.color != undefined) this._color.deserialize(data.color);
-		if (data.border_color != undefined) this._borderColor.deserialize(data.border_color);
-		if (data.border_width != undefined) this._borderWidth.deserialize(data.border_width);
-		if (data.text_font != undefined) this._textFont.deserialize(data.text_font);
-		if (data.text_size != undefined) this._textSize.deserialize(data.text_size);
-		if (data.text_align != undefined) this._textAlign.deserialize(data.text_align);
-		if (data.text_color != undefined) this._textColor.deserialize(data.text_color);
-		if (data.icon != undefined) this._icon.deserialize(data.icon);
-		if (data.icon_color != undefined) this._iconColor.deserialize(data.icon_color);
-		if (data.icon_size != undefined) this._iconSize.deserialize(data.icon_size);
-		if (data.icon_offset_x != undefined) this._iconOffsetX.deserialize(data.icon_offset_x);
-		if (data.icon_offset_y != undefined) this._iconOffsetY.deserialize(data.icon_offset_y);
 	}
 
 
@@ -202,7 +173,7 @@ export class Style extends Node {
 	 * @param propertyName The name of the property. */
 	getValue(propertyName: string): number {
 
-		let v = this[propertyName], p = this._parent;
+		let v = this[propertyName], p = this._nodeParent;
 		// if (v == null && p !== null) return p.parsePropertyValue(propertyName);
 		// if (v.endsWith())
 		// return this._color || (this._parent)? this._parent.color: null; 

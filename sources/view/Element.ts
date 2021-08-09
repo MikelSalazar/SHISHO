@@ -1,5 +1,6 @@
-import { Vector } from "../data/types/Vector";
+
 import { Style } from "../data/model/Style";
+import { Vector } from "../data/types/complex/Vector";
 import { SHISHO } from "../SHISHO";
 import { Shape } from "./Shape";
 import { Circle } from "./shapes/Circle";
@@ -67,7 +68,7 @@ export class Element {
 		text: string = null, icon: string = null) {
 
 		this._name = name;
-		this._position = position || new Vector();
+		this._position = position || new Vector("position");
 		this._styles = styles || [];
 		this._text = text;
 		this._icon = icon;
@@ -105,50 +106,36 @@ export class Element {
 		}
 
 		// Create the background shape
-		// ctx.beginPath();
-		// switch (s.shape.value) {
-		// 	case "circle":
-		// 		if (s.radius == undefined) throw Error("No radius defined");
-		// 		let r = s.radius.get();
-		// 		ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
-		// 		break;
-		// 	case "rectangle":
-		// 		break;
-		// 	// default: throw Error("Invalid element Type"); break;
-		// }
-
-		// Create the background shape
 		if (!this._shape) {
 			switch (s.shape.value) {
 				case "circle":
 					this._shape = new Circle({x: 0, y: 0, 
-						radius: s.radius.get(), color: s.color.get(),
-						borderColor: s.borderColor.get(),
+						radius: s.radius.get(), color: s.color.toString(),
+						borderColor: s.borderColor.toString(),
 						borderWidth: s.borderWidth.get()});
 					break;
 			}
 		}
+		if (!this._shape) return;
 		this._shape.draw(ctx, p);
 
 		// Draw the icon
 		if (this._icon) {
 			// console.log(s.serialize());
-			if (s.iconColor) ctx.fillStyle = s.iconColor.get();
+			if (s.iconColor) ctx.fillStyle = s.iconColor.toString();
 			if (s.iconOffsetX) ctx.translate(s.iconOffsetX.get(), 0);
 			if (s.iconOffsetY) ctx.translate(0, s.iconOffsetY.get());
 			if (SHISHO.resources[this._icon]) {
 				(SHISHO.resources[this._icon] as Shape).draw(ctx, p, s.iconSize.get());
-			} else throw Error("Unknow Icon: " + this._icon);
+			} else throw Error("Unknown Icon: " + this._icon);
 		}
 
 		// Draw the texts
 		for (const textShape of textShapes) {
-			if (s.textColor) ctx.fillStyle = s.textColor.get();
+			if (s.textColor) ctx.fillStyle = s.textColor.toString();
 			ctx.textAlign = "center"; ctx.textBaseline = "middle";
 			textShape.draw(ctx, p);
 		}
-
-
 
 		// Restore the previous state
 		ctx.restore();

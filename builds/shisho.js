@@ -26,7 +26,7 @@ class SHISHO {
 		// let style = new Style("test", null, {
 		// 	name: "test", shape: "circle",
 		// 	color: [0, 128, 255],
-		// 	radius: 128, iconColor: [255, 255, 255], iconSize: 160
+		// 	radius: 128, icon_color: [255, 255, 255], icon_size: 160
 		// });
 		// console.log(style.serialize());
 		// return;
@@ -59,6 +59,10 @@ class SHISHO {
 
 			// Try to deserialize the given data
 			this.deserialize(params.data);
+
+			// //DEBUG
+			// console.log(this._data.serialize());
+			// return;
 		}
 
 
@@ -306,7 +310,7 @@ class JsonImporter {
 		let jsonData = JSON.parse(data);
 
 		// deserialize the JSON data
-		root.deserialize(jsonData, combine);
+		root.deserialize(jsonData, "combine");
 	}
 }
 
@@ -456,32 +460,46 @@ class Node {
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
-	/** Initializes a new Node instance.
-	 * @param name The name of the Node.
-	 * @param parent The parent Node.
-	 * @param data The initialization data. */
-	constructor(name, parent, data = null) {
+	/** Initializes a new instance of the Number class.
+	 * @param nodeType The type of the Node.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
+	 * @param nodeData The initialization data. */
+	constructor(nodeType, nodeName, nodeParent, nodeData) {
+
+		// ---------------------------------------------------------- PUBLIC FIELDS
+
+		/** Marks the object as a Node. */
+		this.isNode = true;
 
 		// Initialize the data of the node
-		this._nodeName = name || "node";
-		this._nodeParent = parent;
+		this._nodeType = nodeType || "node";
+		this._nodeName = nodeName;
+		this._nodeParent = nodeParent;
 		this._nodeChildren = [];
-		this._nodeUpdated = false;
 
 		// Create a link between the node and its parent
-		if (parent)
-			parent._nodeChildren.push(this);
+		if (nodeParent)
+			nodeParent._nodeChildren.push(this);
+
+		// Send an update request upwards in the Node hierarchy
+		this._nodeUpdated = true;
+		this.nodeUpdated = false;
 	}
+
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
 	/** The name of the Node. */
 	get nodeName() { return this._nodeName; }
 
+	/** The type of the Node. */
+	get nodeType() { return this._nodeType; }
+
 	/** The parent Node. */
 	get nodeParent() { return this._nodeParent; }
 
-	/** The children Nodes. */
+	/** The child Nodes. */
 	get nodeChildren() { return this._nodeChildren; }
 
 	/** Indicates if the Node has been updated or not. */
@@ -494,9 +512,10 @@ class Node {
 
 		// Propagate "true" values downwards in the node hierarchy
 		if (value)
-			this._nodeChildren.forEach(c => { c.nodeUpdated = true; });
+			for (let child in this._nodeChildren)
+				this._nodeChildren[child].nodeUpdated = false;
 
-		// Otherwise, propagate "false" values updwards in the node hierarchy
+		// Otherwise, propagate "false" values upwards in the node hierarchy
 		else if (this._nodeParent)
 			this._nodeParent.nodeUpdated = false;
 
@@ -507,32 +526,83 @@ class Node {
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
+	/** Updates the Node.
+	 * @param deltaTime The update time.
+	 * @param forced Indicates whether the update is forced or not. */
+	update(deltaTime = 0, forced = false) {
+
+		// If the update is not forced, skip it when the node is already updated
+		if (this._nodeUpdated && !forced)
+			return;
+
+		// Call the event function
+		if (Node.onPreUpdate)
+			Node.onPreUpdate(this);
+
+		// Update the children
+		for (let child of this._nodeChildren)
+			child.update(deltaTime, forced);
+
+		// Call the event function
+		if (Node.onPostUpdate)
+			Node.onPostUpdate(this);
+
+		// Mark this node as updated
+		this._nodeUpdated = true;
+	}
+
 
 	/** Serializes the Node instance.
+	 * @param mode The serialization mode.
 	 * @return The serialized data. */
-	serialize() {
+	serialize(mode) {
 
 		// Create an object to serialize the Node
-		let serializedObject = {};
+		let serializedData = {};
 
-		// Save the data of the children
-		let childIndex = 0, childCount = this._nodeChildren.length;
-		for (childIndex = 0; childIndex < childCount; childIndex++) {
-			let childNode = this._nodeChildren[childIndex];
-			serializedObject[childNode._nodeName] = childNode.serialize();
-		}
+		// Save the name of the node
+		// if (this.nodeName) serializedData.name = this.nodeName;
 
-		// Return the object with the serializated data
-		return serializedObject;
+		// Serialize the child nodes
+		for (let child of this._nodeChildren)
+			if (child.nodeName)
+				serializedData[child.nodeName] = child.serialize(mode);
+
+		// Return the object with the serialized data
+		return serializedData;
 	}
 
 
 	/** Deserializes the Node instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data = {}, combine = true) {
+	 * @param data The data to deserialize.
+	 * @param mode The deserialization mode. */
+	deserialize(data = {}, mode) {
+
+		// If the data is a string, check if it is JSON or CSV data
 		if (typeof data == "string")
-			return JSON.parse(data);
+			JSON.parse(data);
+
+		// If the data is an array, try to parse it value by value
+		if (Array.isArray(data)) {
+			for (let dataIndex = 0; dataIndex < data.length; dataIndex++) {
+				if (dataIndex >= this.nodeChildren.length)
+					return;
+				this.nodeChildren[dataIndex].deserialize(data[dataIndex], mode);
+			}
+		}
+
+		// If the data is an object, analyze it key by key
+		else
+			for (let dataKey in data) {
+				if (data[dataKey] == undefined)
+					continue;
+				for (let child of this._nodeChildren) {
+					if (child._nodeName == dataKey) {
+						child.deserialize(data[dataKey], mode);
+						break;
+					}
+				}
+			}
 	}
 }
 
@@ -554,7 +624,7 @@ class Class extends Node {
 	constructor(nodeName, ontology, data) {
 
 		// Call the base class constructor
-		super(nodeName || "class", ontology, data);
+		super("class", nodeName, ontology, data);
 
 		// Initialize the child nodes
 		this._name = new String("name", this);
@@ -563,7 +633,7 @@ class Class extends Node {
 		this._positions = new NodeSet("positions", this, Vector);
 
 		// Deserialize the initialization data
-		if (data != undefined)
+		if (data)
 			this.deserialize(data);
 	}
 
@@ -581,27 +651,6 @@ class Class extends Node {
 
 	/** The positions of the Class in the different Graph views. */
 	get positions() { return this._positions; }
-
-
-	// --------------------------------------------------------- PUBLIC METHODS
-
-	/** Deserializes the Class instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data = {}, combine = true) {
-
-		// Deserialize the properties of the class
-		if (data.name)
-			this._name.deserialize(data.name);
-		else
-			throw Error("Class without name.");
-		if (data.description)
-			this._description.deserialize(data.description);
-		if (data.properties)
-			this._properties.deserialize(data.properties);
-		if (data.positions)
-			this._positions.deserialize(data.positions);
-	}
 }
 
 
@@ -621,14 +670,14 @@ class Ontology extends Node {
 	constructor(nodeName, root, data) {
 
 		// Call the base class constructor
-		super(nodeName || "ontology", root, data);
+		super("ontology", nodeName, root, data);
 
 		// Initialize the child nodes
 		this._classes = new NodeSet("classes", this, Class);
-		this._relations = new NodeSet("relation", this, Relation);
+		this._relations = new NodeSet("relations", this, Relation);
 
 		// Deserialize the initialization data
-		if (data != undefined)
+		if (data)
 			this.deserialize(data);
 	}
 
@@ -640,20 +689,6 @@ class Ontology extends Node {
 
 	/** The relations of the ontology. */
 	get relations() { return this._relations; }
-
-
-	// --------------------------------------------------------- PUBLIC METHODS
-
-	/** Deserializes the Ontology instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data = {}, combine = true) {
-		if (data.classes)
-			this._classes.deserialize(data.classes);
-		if (data.relations)
-			this._relations.deserialize(data.relations);
-		1;
-	}
 }
 
 
@@ -672,14 +707,14 @@ class Property extends Node {
 	constructor(nodeName, parentClass, data) {
 
 		// Call the base class constructor
-		super(nodeName || "property", parentClass, data);
+		super("property", nodeName, parentClass, data);
 
 		// Initialize the child nodes
 		this._name = new String("name", this);
 		this._description = new String("description", this);
 
 		// Deserialize the initialization data
-		if (data != undefined)
+		if (data)
 			this.deserialize(data);
 	}
 
@@ -691,23 +726,6 @@ class Property extends Node {
 
 	/** The description of the Property. */
 	get description() { return this._description; }
-
-
-	// --------------------------------------------------------- PUBLIC METHODS
-
-	/** Deserializes the Property instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data = {}, combine = true) {
-
-		// Deserialize the properties of the class
-		if (data.name)
-			this._name.deserialize(data.name);
-		else
-			throw Error("Property without name.");
-		if (data.description)
-			this._description.deserialize(data.description);
-	}
 }
 
 
@@ -725,7 +743,7 @@ class Relation extends Node {
 	constructor(nodeName, ontology, data) {
 
 		// Call the base class constructor
-		super(nodeName || "relation", ontology, data);
+		super("relation", nodeName, ontology, data);
 
 		// Initialize the child nodes
 		this._name = new String("name", this);
@@ -735,7 +753,7 @@ class Relation extends Node {
 		this._midpoint = new Vector("midpoint", this);
 
 		// Deserialize the initialization data
-		if (data != undefined)
+		if (data)
 			this.deserialize(data);
 	}
 
@@ -755,30 +773,6 @@ class Relation extends Node {
 
 	/** The target Class of the Relation. */
 	get midpoint() { return this._midpoint; }
-
-	// --------------------------------------------------------- PUBLIC METHODS
-
-	/** Deserializes the Relation instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data = {}, combine = true) {
-		if (data.name)
-			this._name.deserialize(data.name);
-		else
-			throw Error("Relation without name.");
-		if (data.description)
-			this._description.deserialize(data.description);
-		if (data.origin)
-			this._origin.deserialize(data.origin);
-		else
-			throw Error("Relation without origin (" + data.name + ").");
-		if (data.target)
-			this._target.deserialize(data.target);
-		else
-			throw Error("Relation without target (" + data.name + ").");
-		if (data.midpoint)
-			this._midpoint.deserialize(data.midpoint);
-	}
 }
 
 
@@ -807,7 +801,7 @@ class Root extends Node {
 		this._styles = new NodeSet("styles", this, Style);
 
 		// Deserialize the initialization data
-		if (data != undefined)
+		if (data)
 			this.deserialize(data);
 	}
 
@@ -828,28 +822,8 @@ class Root extends Node {
 
 	/** The styles of the Root. */
 	get styles() { return this._styles; }
-
-
-	// --------------------------------------------------------- PUBLIC METHODS
-
-	/** Deserializes the Root instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data = {}, combine = true) {
-
-		// Deserialize the properties of the class
-		if (data.name)
-			this._name.deserialize(data.name);
-		else
-			throw Error("Knowledge base without name.");
-		if (data.description)
-			this._description.deserialize(data.description);
-		if (data.ontology)
-			this._ontology.deserialize(data.ontology, combine);
-		if (data.styles)
-			this.styles.deserialize(data.ontology, combine);
-	}
 }
+
 
 
 
@@ -868,32 +842,32 @@ class Style extends Node {
 	constructor(nodeName, root, data) {
 
 		// Call the base class constructor
-		super(nodeName || "style", root, data);
+		super("style", nodeName, root, data);
 
 		// Initialize the child nodes
 		this._name = new String("name", this);
-		this._parent = new String("parent", this);
+		this._nodeParent = new String("parent", this);
 
 		this._shape = new String("shape", this);
-		this._width = new Measure("width", this);
-		this._height = new Measure("height", this);
-		this._radius = new Measure("radius", this);
-		this._radius2 = new Measure("radius2", this);
+		this._width = new Size("width", this);
+		this._height = new Size("height", this);
+		this._radius = new Size("radius", this);
+		this._radius2 = new Size("radius2", this);
 
 		this._color = new Color("color", this);
 		this._borderColor = new Color("border_color", this);
-		this._borderWidth = new Measure("border_width", this);
+		this._borderWidth = new Size("border_width", this);
 
 		this._textFont = new String("text_font", this);
-		this._textSize = new Measure("text_size", this);
+		this._textSize = new Size("text_size", this);
 		this._textAlign = new String("text_align", this);
 		this._textColor = new Color("text_color", this);
 
 		this._icon = new String("icon", this);
 		this._iconColor = new Color("icon_color", this);
-		this._iconSize = new Measure("icon_size", this);
-		this._iconOffsetX = new Measure("icon_offset_x", this);
-		this._iconOffsetY = new Measure("icon_offset_y", this);
+		this._iconSize = new Size("icon_size", this);
+		this._iconOffsetX = new Distance("icon_offset_x", this);
+		this._iconOffsetY = new Distance("icon_offset_y", this);
 
 		// Deserialize the initialization data
 		if (data != undefined)
@@ -962,60 +936,11 @@ class Style extends Node {
 	get iconOffsetY() { return this._iconOffsetY; }
 
 
-	// --------------------------------------------------------- PUBLIC METHODS
-
-	/** Deserializes the Style instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data = {}, combine = true) {
-
-		// Deserialize the properties of the class
-		if (data.name != undefined)
-			this._name.deserialize(data.shape);
-		if (data.parent != undefined)
-			this._parent.deserialize(data.parent);
-		if (data.shape != undefined)
-			this._shape.deserialize(data.shape);
-		if (data.width != undefined)
-			this._width.deserialize(data.width);
-		if (data.height != undefined)
-			this._height.deserialize(data.height);
-		if (data.radius != undefined)
-			this._radius.deserialize(data.radius);
-		if (data.radius2 != undefined)
-			this._radius2.deserialize(data.radius2);
-		if (data.color != undefined)
-			this._color.deserialize(data.color);
-		if (data.border_color != undefined)
-			this._borderColor.deserialize(data.border_color);
-		if (data.border_width != undefined)
-			this._borderWidth.deserialize(data.border_width);
-		if (data.text_font != undefined)
-			this._textFont.deserialize(data.text_font);
-		if (data.text_size != undefined)
-			this._textSize.deserialize(data.text_size);
-		if (data.text_align != undefined)
-			this._textAlign.deserialize(data.text_align);
-		if (data.text_color != undefined)
-			this._textColor.deserialize(data.text_color);
-		if (data.icon != undefined)
-			this._icon.deserialize(data.icon);
-		if (data.icon_color != undefined)
-			this._iconColor.deserialize(data.icon_color);
-		if (data.icon_size != undefined)
-			this._iconSize.deserialize(data.icon_size);
-		if (data.icon_offset_x != undefined)
-			this._iconOffsetX.deserialize(data.icon_offset_x);
-		if (data.icon_offset_y != undefined)
-			this._iconOffsetY.deserialize(data.icon_offset_y);
-	}
-
-
 	/** Obtains the value of a property.
 	 * @param propertyName The name of the property. */
 	getValue(propertyName) {
 
-		let v = this[propertyName], p = this._parent;
+		let v = this[propertyName], p = this._nodeParent;
 		// if (v == null && p !== null) return p.parsePropertyValue(propertyName);
 		// if (v.endsWith())
 		// return this._color || (this._parent)? this._parent.color: null; 
@@ -1045,45 +970,98 @@ class Style extends Node {
 
 
 
-/** Defines a Node set. */
+/** Define a set of data Nodes. */
 class NodeSet extends Node {
+
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
-	/** Initializes a new instance of the Color class.
-	 * @param nodeName The name of the Node.
-	 * @param nodeParent The parent Node.
+	/** Initializes a new instance of the NodeSet class.
+	 * @param name The name of the NodeSet.
+	 * @param parent The parent Node.
+	 * @param nodeSubtype The node subtype of the NodeSet.
 	 * @param data The initialization data. */
-	constructor(nodeName, nodeParent, typeConstructor, data = {}) {
-		super(nodeName || "color", nodeParent, data);
-		this._typeConstructor = typeConstructor;
+	constructor(name, parent, nodeSubtype, data) {
+
+		// Call the parent class constructor
+		super("nodeset", name, parent, data);
+
+		// Set the node subtype
+		this._nodeSubtype = nodeSubtype;
 	}
+
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
 	/** The children Nodes (converted to the type). */
-	get children() {
+	get typedChildren() {
 		return this.nodeChildren;
 	}
 
+
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data, combine = true) {
+	/** Serializes the Node instance.
+	 * @param mode The serialization mode.
+	 * @return The serialized data. */
+	serialize(mode) {
 
-		for (const key in data) {
-			let node = new this._typeConstructor(key, this, data[key]);
-			this[key] = node;
-		}
+		// Create an object to serialize the Node
+		let array = [];
+
+		// Serialize the child nodes
+		for (let childName in this._nodeChildren)
+			array.push(this._nodeChildren[childName].serialize(mode));
+
+		// Return the object with the serialized data
+		return array;
 	}
+
+
+	/** Deserializes the NodeSet instance.
+	 * @param data The data to deserialize.
+	 * @param mode The deserialization mode. */
+	deserialize(data, mode) {
+		if (Array.isArray(data)) {
+			for (const datum of data)
+				new this._nodeSubtype(datum.name, this, datum);
+		}
+		else
+			for (const key in data) {
+				let node = new this._nodeSubtype(key, this, data[key]);
+				this[key] = node;
+			}
+	}
+
 
 	/** Gets a specific Node in the collection.
 	 * @param name The name of the node to get. */
 	get(name) { return this[name]; }
-}
 
+
+	/** Gets a node by index.
+	 * @param index The index of the node to get.
+	 * @returns The node with the given index. */
+	getIndex(index) {
+		return this.nodeChildren[index];
+	}
+
+
+	/** Provides an iterator to navigate though the NodeSet. */
+	[Symbol.iterator]() {
+		let pointer = 0;
+		let items = this._nodeChildren;
+		return {
+			next() {
+				if (pointer < items.length)
+					return { done: false,
+						value: items[pointer++] };
+				else
+					return { done: true, value: null };
+			}
+		};
+	}
+}
 
 
 
@@ -1101,7 +1079,7 @@ class Color extends Node {
 	constructor(nodeName, nodeParent, data) {
 
 		// Call the base class constructor
-		super(nodeName || "color", nodeParent, data);
+		super("color", nodeName, nodeParent, data);
 
 		// Initialize the child nodes
 		this._r = new Number("r", this);
@@ -1128,26 +1106,6 @@ class Color extends Node {
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data, combine = true) {
-
-		// If the data is an array, copy the first three values
-		if (Array.isArray(data))
-			this.set(data[0], data[1], data[2]);
-		// Otherwise, get the different values
-		else {
-			if (data.r != undefined)
-				this._r.value = data.r;
-			if (data.g != undefined)
-				this._g.value = data.g;
-			if (data.b != undefined)
-				this._b.value = data.b;
-		}
-	}
-
-
 	/** Sets the values of the Color.
 	 * @param r The value of the Red component Color
 	 * @param g The value of the Green component Color.
@@ -1158,8 +1116,9 @@ class Color extends Node {
 		this._b.value = b;
 	}
 
+
 	/** Gets the representation of the Color. */
-	get() {
+	toString() {
 		return "rgb(" + this._r.value + ", " + this._g.value + ", " +
 			this._b.value + ")";
 	}
@@ -1169,75 +1128,377 @@ class Color extends Node {
 
 
 
+/** Defines the Euler Orientation.
+ * @see https://en.wikipedia.org/wiki/Euler_angles */
+class Euler extends Node {
 
-/** Defines a Measure. */
-class Measure extends Node {
 
+	// ----------------------------------------------------- PUBLIC CONSTRUCTOR
 
-	// ------------------------------------------------------------ CONSTRUCTOR
-
-	/** Initializes a new instance of the vector class.
+	/** Initializes a new instance of the EulerOrientation class.
 	 * @param nodeName The name of the Node.
 	 * @param nodeParent The parent Node.
-	 * @param data The initialization data. */
-	constructor(nodeName, nodeParent, data) {
+	 * @param nodeData The initialization data. */
+	constructor(nodeName, nodeParent, nodeData) {
 
-		// Call the base class constructor
-		super(nodeName || "measure", nodeParent, data);
+		// Call the parent constructor
+		super("euler", nodeName, nodeParent, nodeData);
 
-		// Initialize the child nodes
-		this._quantity = new Number("quantity", this);
-		this._unit = new String("unit", this);
+		// Create the children nodes
+		this._x = new Angle("x", this, 0);
+		this._y = new Angle("y", this, 0);
+		this._z = new Angle("z", this, 0);
 
 		// Deserialize the initialization data
-		if (data != undefined)
-			this.deserialize(data);
+		if (nodeData)
+			this.deserialize(nodeData);
 	}
 
 
-	// ------------------------------------------------------ PUBLIC PROPERTIES
+	// ------------------------------------------------------- PUBLIC ACCESSORS
 
-	/** The numeric value of the Measure. */
-	get quantity() { return this._quantity; }
+	/** The Angle in the X axis. */
+	get x() { return this._x; }
 
-	/** The type of unit of the Measure. */
-	get unit() { return this._unit; }
+	/** The Angle in the Y axis. */
+	get y() { return this._y; }
+
+	/** The Angle in the Z axis. */
+	get z() { return this._z; }
+}
+
+
+
+
+
+/** Defines a four-dimensional complex number to describe rotations. */
+class Quaternion extends Node {
+
+
+	// ----------------------------------------------------- PUBLIC CONSTRUCTOR
+
+	/** Initializes a new instance of the Quaternion class.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
+	 * @param nodeData The initialization data. */
+	constructor(nodeName, nodeParent, nodeData) {
+
+		// Call the parent constructor
+		super("distance", nodeName, nodeParent, nodeData);
+
+		// Create the children nodes
+		this._x = new Measure("x", "x", this, 0);
+		this._y = new Measure("y", "y", this, 0);
+		this._z = new Measure("z", "z", this, 0);
+		this._w = new Measure("w", "w", this, 1);
+
+		// Deserialize the initialization data
+		if (nodeData)
+			this.deserialize(nodeData);
+	}
+
+
+	// ------------------------------------------------------- PUBLIC ACCESSORS
+
+	/** The value of the quaternion vector in the X(i) axis. */
+	get x() { return this._x; }
+
+	/** The value of the quaternion vector in the Y(j) axis. */
+	get y() { return this._y; }
+
+	/** The value of the quaternion vector in the Z(k) axis. */
+	get z() { return this._z; }
+
+	/** The rotation half-angle around the quaternion vector. */
+	get w() { return this._w; }
+}
+
+
+
+
+/** Defines a three-dimensional vector. */
+class Vector extends Node {
+
+
+	// ----------------------------------------------------- PUBLIC CONSTRUCTOR
+
+	/** Initializes a new instance of the Vector3 class.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
+	 * @param nodeData The initialization data. */
+	constructor(nodeName, nodeParent, nodeData) {
+
+		// Call the parent class constructor
+		super("vector", nodeName, nodeParent, nodeData);
+
+		// Create the children nodes
+		this._x = new Measure("x", "x", this);
+		this._y = new Measure("y", "y", this);
+		this._z = new Measure("z", "z", this);
+
+		// Deserialize the initialization data
+		if (nodeData)
+			this.deserialize(nodeData);
+	}
+
+
+	// ------------------------------------------------------- PUBLIC ACCESSORS
+
+	/** The value in the X axis. */
+	get x() { return this._x; }
+
+	/** The value in the Y axis. */
+	get y() { return this._y; }
+
+	/** The value in the Z axis. */
+	get z() { return this._z; }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data, combine = true) {
-		if (typeof data == "number")
-			this._quantity.value = data;
-		else if (typeof data == "string")
-			this._quantity.value = parseInt(data);
-		// Get the different values
-		else {
-			if (data.quantity != undefined)
-				this.quantity.value = data.quantity;
-			if (data.unit != undefined)
-				this.unit.value = data.unit;
-		}
+	/** Converts the Vector3 instance into an array representation. */
+	toArray() {
+		return [this._x.get() || this.x.default,
+			this._y.get() || this.y.default, this._z.get() || this.z.default];
 	}
 
 
-	/** Sets the values of the Measure.
-	 * @param quantity The numeric value of the Measure.
-	 * @param unit The type of unit of the Measure. */
-	set(quantity, unit) {
-		this.quantity.value = quantity;
-		this.unit.value = unit;
+	/** Sets the values of the Vector3 from an array.
+	* @param values An array with the numerical values. */
+	fromArray(values) {
+		this._x.value = ((values.length > 0) ? values[0] : 0);
+		this._y.value = ((values.length > 1) ? values[1] : 0);
+		this._z.value = ((values.length > 2) ? values[2] : 0);
 	}
 
-	/** Gets the actula numeric value. */
-	get() {
-		return this.quantity.value;
+
+	/** Sets the values of the Vector.
+	 *  @param x The value in the X axis.
+	 *  @param y The value in the Y axis.
+	 *  @param z The value in the Z axis. */
+	set(x, y, z) {
+		this._x.value = x;
+		this._y.value = y;
+		this._z.value = z;
 	}
 }
 
+
+
+/** Defines a numeric Measure Node. */
+class Measure extends Node {
+
+
+	// ----------------------------------------------------- PUBLIC CONSTRUCTOR
+
+	/** Initializes a new instance of the Measure class.
+	 * @param nodeType The type of the Node.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
+	 * @param nodeData The initialization data. */
+	constructor(nodeType, nodeName, nodeParent, nodeData) {
+
+		// Call the parent class constructor
+		super(nodeType || "measure", nodeName, nodeParent, nodeData);
+
+		// --------------------------------------------------------- PRIVATE FIELDS
+
+		/** The current value of the Measure.*/
+		this._value = undefined;
+
+		/** The minimum possible value of Measure. */
+		this._min = Number.NEGATIVE_INFINITY;
+
+		/** The maximum possible value of the Measure. */
+		this._max = Number.POSITIVE_INFINITY;
+
+		/** The default value of the Measure. .*/
+		this._default = 0;
+
+		/** The measurement unit of the Measure. */
+		this._unit = undefined;
+
+		// Deserialize the initialization data
+		if (nodeData)
+			this.deserialize(nodeData);
+	}
+
+
+	// ------------------------------------------------------- PUBLIC ACCESSORS
+
+	/** The current value of the Measure.*/
+	get value() { return this._value; }
+	set value(newValue) {
+		if (this._value != newValue)
+			this.nodeUpdated = false;
+		if (newValue == undefined)
+			newValue = this._default;
+		if (newValue < this._min)
+			this._value = this._min;
+		else if (newValue > this._max)
+			this._value = this._max;
+		else
+			this._value = newValue;
+		this.nodeUpdated = false;
+	}
+
+
+	/** The minimum possible value of Measure. */
+	get min() { return this._min; }
+	set min(newMin) {
+		if (newMin > this._max)
+			this._max = newMin;
+		if (this._value && newMin > this._value)
+			this.value = newMin;
+		this._min = newMin;
+		this.nodeUpdated = false;
+	}
+
+
+	/** The maximum possible value of the Measure. */
+	get max() { return this._max; }
+	set max(newMax) {
+		if (newMax < this._min)
+			this._min = newMax;
+		if (this._value && this._value)
+			this.value = newMax;
+		this._max = newMax;
+		this.nodeUpdated = false;
+	}
+
+
+	/** The default value of the Measure. */
+	get default() { return this._default; }
+	set default(newDefault) {
+		this._default = newDefault;
+		this.nodeUpdated = false;
+	}
+
+
+	/** Gets the measurement unit of the Measure. */
+	get unit() { return this._unit; }
+	set unit(newUnit) {
+		this._unit = newUnit;
+		this.nodeUpdated = false;
+	}
+
+
+	// --------------------------------------------------------- PUBLIC METHODS
+
+	/** Serializes the Number instance.
+	 * @return The serialized data. */
+	serialize() { return this._value; }
+
+
+	/** Deserializes the Number instance.
+	 * @param data The data to deserialize.
+	 * @param mode The deserialization mode. */
+	deserialize(data, mode) {
+		if (typeof data !== "number")
+			data = parseFloat(data);
+		this.value = data;
+	}
+
+	/** Obtains the calculate value.
+	 * @returns The calculated value; */
+	get() { return this.value; }
+}
+
+
+
+/** Defines a angular measure. */
+class Angle extends Measure {
+
+	// ----------------------------------------------------- PUBLIC CONSTRUCTOR
+
+	/** Initializes a new instance of the Angle class.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
+	 * @param nodeData The initialization data. */
+	constructor(nodeName, nodeParent, nodeData) {
+
+		// Call the parent class constructor
+		super("angle", nodeName, nodeParent, nodeData);
+
+		// Deserialize the initialization data
+		if (nodeData)
+			this.deserialize(nodeData);
+		if (this.unit)
+			this.unit = "degrees";
+	}
+}
+
+
+
+/** Defines a distance (relative dimensional magnitude) measure. */
+class Distance extends Measure {
+
+	// ----------------------------------------------------- PUBLIC CONSTRUCTOR
+
+	/** Initializes a new instance of the Distance class.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
+	 * @param nodeData The initialization data. */
+	constructor(nodeName, nodeParent, nodeData) {
+
+		// Call the parent class constructor
+		super("distance", nodeName, nodeParent, nodeData);
+
+		// Deserialize the initialization data
+		if (nodeData)
+			this.deserialize(nodeData);
+		if (this.unit)
+			this.unit = "meters";
+	}
+}
+
+
+
+/** Defines a size (dimensional magnitude) measure. */
+class Size extends Measure {
+
+	// ----------------------------------------------------- PUBLIC CONSTRUCTOR
+
+	/** Initializes a new instance of the Size class.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
+	 * @param nodeData The initialization data. */
+	constructor(nodeName, nodeParent, nodeData) {
+
+		// Call the parent class constructor
+		super("size", nodeName, nodeParent, nodeData);
+
+		// Deserialize the initialization data
+		if (nodeData)
+			this.deserialize(nodeData);
+		if (this.unit)
+			this.unit = "meters";
+	}
+}
+
+
+
+/** Defines a time (dimensional magnitude) measure. */
+class Time extends Measure {
+
+	// ----------------------------------------------------- PUBLIC CONSTRUCTOR
+
+	/** Initializes a new instance of the Time class.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
+	 * @param nodeData The initialization data. */
+	constructor(nodeName, nodeParent, nodeData) {
+
+		// Call the parent class constructor
+		super("time", nodeName, nodeParent, nodeData);
+
+		// Deserialize the initialization data
+		if (nodeData)
+			this.deserialize(nodeData);
+		if (this.unit)
+			this.unit = "seconds";
+	}
+}
 
 
 
@@ -1245,179 +1506,127 @@ class Measure extends Node {
 class Number extends Node {
 
 
-	// ------------------------------------------------------------ CONSTRUCTOR
+	// ----------------------------------------------------- PUBLIC CONSTRUCTOR
 
 	/** Initializes a new instance of the Number class.
 	 * @param nodeName The name of the Node.
 	 * @param nodeParent The parent Node.
-	 * @param data The initialization data. */
-	constructor(nodeName, nodeParent, data) {
+	 * @param nodeData The initialization data. */
+	constructor(nodeName, nodeParent, nodeData) {
 
-		// Call the base class nada
-		super(nodeName || "string", nodeParent, data);
+		// Call the parent class constructor
+		super("number", nodeName, nodeParent, nodeData);
 
-		// Initialize the value
+		// --------------------------------------------------------- PRIVATE FIELDS
+
+		/** The current value of the Number.*/
 		this._value = undefined;
 
+		/** The default value of the Number. .*/
+		this._default = undefined;
+
 		// Deserialize the initialization data
-		if (data != undefined)
-			this.deserialize(data);
+		if (nodeData)
+			this.deserialize(nodeData);
 	}
 
 
-	// ------------------------------------------------------ PUBLIC PROPERTIES
+	// ------------------------------------------------------- PUBLIC ACCESSORS
 
-	/** The value of the Number. */
+	/** The current value of the Number.*/
 	get value() { return this._value; }
-	set value(value) {
-		// Ift he value is different, mark the node for update
-		if (this.value != value)
+	set value(v) {
+		if (this._value != v)
 			this.nodeUpdated = false;
-
-		// Set the new value
-		this._value = value;
+		this._value = v;
 	}
+
+	/** Gets the default value of the Number. */
+	get default() { return this._default; }
+	set default(newDefault) { this._default = newDefault; }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Serializes the instance.
+	/** Serializes the Number instance.
 	 * @return The serialized data. */
 	serialize() { return this._value; }
 
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data, combine = true) {
-		if (data == null)
-			this.value = 0;
-		else if (typeof data == "number")
+	/** Deserializes the Number instance.
+	 * @param data The data to deserialize.
+	 * @param mode The deserialization mode. */
+	deserialize(data, mode) {
+		if (data == undefined)
+			this.value = undefined;
+		else if (typeof data !== "number")
+			this.value = parseFloat(data);
+		else
 			this.value = data;
 	}
 }
 
 
 
-
-/** Defines a Text Node. */
+/** Defines a String Node. */
 class String extends Node {
 
-	// ------------------------------------------------------------ CONSTRUCTOR
+
+	// ----------------------------------------------------- PUBLIC CONSTRUCTOR
 
 	/** Initializes a new instance of the String class.
 	 * @param nodeName The name of the Node.
 	 * @param nodeParent The parent Node.
-	 * @param data The initialization data. */
-	constructor(nodeName, nodeParent, data = {}) {
-		// Call the base class constructor
-		super(nodeName || "string", nodeParent, data);
+	 * @param nodeData The initialization data. */
+	constructor(nodeName, nodeParent, nodeData) {
 
-		// Initialize the value
+		// Call the parent class constructor
+		super("string", nodeName, nodeParent, nodeData);
+
+		// --------------------------------------------------------- PRIVATE FIELDS
+
+		/** The current value of the String.*/
 		this._value = undefined;
 
+		/** The default value of the String. .*/
+		this._default = undefined;
+
 		// Deserialize the initialization data
-		if (data != undefined)
-			this.deserialize(data);
+		if (nodeData)
+			this.deserialize(nodeData);
 	}
 
-	// ------------------------------------------------------ PUBLIC PROPERTIES
 
-	/** The value of the String. */
+	// ------------------------------------------------------- PUBLIC ACCESSORS
+
+	/** The current value of the String.*/
 	get value() { return this._value; }
-	set value(value) {
-		// Ift he value is different, mark the node for update
-		if (this.value != value)
+	set value(v) {
+		if (this._value != v)
 			this.nodeUpdated = false;
-
-		// Set the new value
-		this._value = value;
+		this._value = v;
 	}
+
+	/** The default value of the String. .*/
+	get default() { return this._default; }
+	set default(newDefault) { this._default = newDefault; }
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
-	/** Serializes the instance.
+	/** Serializes the String instance.
 	 * @return The serialized data. */
 	serialize() { return this._value; }
 
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data, combine = true) {
-		if (data == null)
-			this.value = null;
-		else if (typeof data == "string")
-			this.value = data;
+	/** Deserializes the String instance.
+	 * @param data The data to deserialize.
+	 * @param mode The deserialization mode. */
+	deserialize(data, mode) {
+		if (typeof data !== "string")
+			data = JSON.stringify(data);
+		this.value = data;
 	}
-}
-
-
-
-
-
-/** Defines a bi-dimensional Vector. */
-class Vector extends Node {
-
-
-	// ------------------------------------------------------------ CONSTRUCTOR
-
-	/** Initializes a new instance of the Vector class.
-	 * @param nodeName The name of the Node.
-	 * @param nodeParent The parent Node.
-	 * @param data The initialization data. */
-	constructor(nodeName, nodeParent, data) {
-
-		// Call the base class constructor
-		super(nodeName || "vector", nodeParent, data);
-
-		// Initialize the child nodes
-		this._x = new Number("x", this);
-		this._y = new Number("y", this);
-
-		// Deserialize the initialization data
-		if (data != undefined)
-			this.deserialize(data);
-	}
-
-
-	// ------------------------------------------------------ PUBLIC PROPERTIES
-
-	/** The value of the Vector in the X axis. */
-	get x() { return this._x.value; }
-	set x(value) { this._x.value = value; }
-
-	/** The value of the Vector in the Y axis. */
-	get y() { return this._y.value; }
-	set y(value) { this._y.value = value; }
-
-
-	// --------------------------------------------------------- PUBLIC METHODS
-
-	/** Deserializes the instance.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data, combine = true) {
-		// If the data is an array, copy the first two values
-		if (Array.isArray(data))
-			this.set(data[0], data[1]);
-
-		// Otherwise, get the different values
-		else {
-			if (data.x != undefined)
-				this._x.value = data.x;
-			if (data.y != undefined)
-				this._y.value = data.y;
-		}
-	}
-
-
-	/** Sets the values of the Vector.
-	 * @param x The value of the Vector in the X axis.
-	 * @param y The value of the Vector in the Y axis. */
-	set(x = 0, y = 0) { this._x.value = x; this._y.value = y; }
-
-	toString() { return this._x.value + ", " + this._y.value; }
 }
 
 
@@ -1445,7 +1654,7 @@ class Element {
 		this._visibility = 1;
 
 		this._name = name;
-		this._position = position || new Vector();
+		this._position = position || new Vector("position");
 		this._styles = styles || [];
 		this._text = text;
 		this._icon = icon;
@@ -1509,36 +1718,25 @@ class Element {
 		}
 
 		// Create the background shape
-		// ctx.beginPath();
-		// switch (s.shape.value) {
-		// 	case "circle":
-		// 		if (s.radius == undefined) throw Error("No radius defined");
-		// 		let r = s.radius.get();
-		// 		ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
-		// 		break;
-		// 	case "rectangle":
-		// 		break;
-		// 	// default: throw Error("Invalid element Type"); break;
-		// }
-
-		// Create the background shape
 		if (!this._shape) {
 			switch (s.shape.value) {
 				case "circle":
 					this._shape = new Circle({ x: 0, y: 0,
-						radius: s.radius.get(), color: s.color.get(),
-						borderColor: s.borderColor.get(),
+						radius: s.radius.get(), color: s.color.toString(),
+						borderColor: s.borderColor.toString(),
 						borderWidth: s.borderWidth.get() });
 					break;
 			}
 		}
+		if (!this._shape)
+			return;
 		this._shape.draw(ctx, p);
 
 		// Draw the icon
 		if (this._icon) {
 			// console.log(s.serialize());
 			if (s.iconColor)
-				ctx.fillStyle = s.iconColor.get();
+				ctx.fillStyle = s.iconColor.toString();
 			if (s.iconOffsetX)
 				ctx.translate(s.iconOffsetX.get(), 0);
 			if (s.iconOffsetY)
@@ -1547,19 +1745,17 @@ class Element {
 				SHISHO.resources[this._icon].draw(ctx, p, s.iconSize.get());
 			}
 			else
-				throw Error("Unknow Icon: " + this._icon);
+				throw Error("Unknown Icon: " + this._icon);
 		}
 
 		// Draw the texts
 		for (const textShape of textShapes) {
 			if (s.textColor)
-				ctx.fillStyle = s.textColor.get();
+				ctx.fillStyle = s.textColor.toString();
 			ctx.textAlign = "center";
 			ctx.textBaseline = "middle";
 			textShape.draw(ctx, p);
 		}
-
-
 
 		// Restore the previous state
 		ctx.restore();
@@ -1653,7 +1849,7 @@ class Widget {
 		if (value)
 			this._children.forEach(c => { c._updated = true; });
 
-		// Otherwise, propagate "false" values updwards in the widget hierarchy
+		// Otherwise, propagate "false" values upwards in the widget hierarchy
 		else if (this._parent)
 			this._parent._updated = false;
 
@@ -1666,7 +1862,7 @@ class Widget {
 
 	/** Updates the Widget.
 	 * @param deltaTime The time since the last call.
-	 * @param forced Indicates wheter to force the update or not. */
+	 * @param forced Indicates whether to force the update or not. */
 	update(deltaTime, forced = false) {
 
 		// Check if we have to force the update
@@ -1823,7 +2019,7 @@ class MainLayer extends Layer {
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
-	/** Initializes the GraphLayer instance
+	/** Initializes the MainLayer instance
 	 * @param viewport The Viewport the layer belongs to. */
 	constructor(viewport) {
 
@@ -1991,7 +2187,7 @@ class Shape {
 
 		ctx.translate(this._x, this.y);
 		if (position)
-			ctx.translate(position.x, position.y);
+			ctx.translate(position.x.get(), position.y.get());
 
 		// If there is a size, calculate the scale
 		if (size) {
@@ -2024,7 +2220,6 @@ class Shape {
 		// Draw the text
 		if (this._text) {
 
-			// if (this._font) ctx.1
 			// Draw the path
 			ctx.fillStyle = this._color;
 			ctx.fillText(this._text, 0, 0);
@@ -2033,7 +2228,7 @@ class Shape {
 		// Draw the subshapes
 		this._children.forEach(child => { child.draw(ctx); });
 
-		// Restor the previous state
+		// Restore the previous state
 		ctx.restore();
 	}
 }
@@ -2763,27 +2958,30 @@ class Graph extends Widget {
 		ctx.textAlign = 'center';
 		ctx.textBaseline = "middle";
 
-		// Draw the connectors for the realtionships
-		for (const relation of o.relations.children) {
-			let origin = o.classes[relation.origin.value].positions.children[0];
-			let target = o.classes[relation.target.value].positions.children[0];
-			let textPosX, textPosY;
+		// Draw the connectors for the relationships
+		for (const relation of o.relations.typedChildren) {
+			let origin = o.classes.get(relation.origin.value);
+			let target = o.classes.get(relation.target.value);
+			let originPos = origin.positions.getIndex(0);
+			let targetPos = target.positions.getIndex(0);
+			let originX = originPos.x.get(), originY = originPos.y.get();
+			let targetX = targetPos.x.get(), targetY = targetPos.y.get();
 			ctx.beginPath();
-			ctx.moveTo(origin.x, origin.y);
-
-			if (relation.midpoint.x != undefined) {
+			ctx.moveTo(originX, originY);
+			let textPosX, textPosY;
+			if (relation.midpoint.x.get() != undefined) {
 				let midpoint = relation.midpoint;
-				let c = this.fitCircleToPoints(origin.x, origin.y, midpoint.x, midpoint.y, target.x, target.y);
-				let ang1 = Math.atan2(origin.y - c.y, origin.x - c.x);
-				let ang2 = Math.atan2(target.y - c.y, target.x - c.x);
+				let c = this.fitCircleToPoints(originX, originY, midpoint.x, midpoint.y, targetX, targetY);
+				let ang1 = Math.atan2(originY - c.y, originX - c.x);
+				let ang2 = Math.atan2(targetY - c.y, targetX - c.x);
 				ctx.arc(c.x, c.y, c.radius, ang1, ang2, c.CCW);
 				textPosX = midpoint.x;
 				textPosY = midpoint.y;
 			}
 			else {
-				textPosX = (origin.x + target.x) / 2;
-				textPosY = (origin.y + target.y) / 2;
-				ctx.lineTo(target.x, target.y);
+				textPosX = (originX + targetX) / 2;
+				textPosY = (originY + targetY) / 2;
+				ctx.lineTo(targetX, targetY);
 			}
 
 			ctx.strokeStyle = 'lightgrey';
@@ -2797,21 +2995,22 @@ class Graph extends Widget {
 
 		// Create the elements to draw
 		this._elements = {};
-		for (const c of o.classes.children) {
+
+		for (const c of o.classes) {
 			let className = c.name.value;
-			let element = new Element(className, c.positions.children[0], [this._basicStyle], className);
+			let element = new Element(className, c.positions.getIndex(0), [this._basicStyle], className);
 			this._elements[className] = element;
 			element.draw(ctx);
 		}
 
 		// Create the Arrows
-		for (const relation of o.relations.children) {
+		for (const relation of o.relations) {
 			let origin = o.classes.get(relation.origin.value);
 			let target = o.classes.get(relation.target.value);
-			let originPos = origin.positions.children[0];
-			let targetPos = target.positions.children[0];
+			let originPos = origin.positions.getIndex(0);
+			let targetPos = target.positions.getIndex(0);
 
-			if (relation.midpoint.x != undefined) {
+			if (relation.midpoint.x.get() != undefined) {
 				originPos = relation.midpoint;
 			}
 
@@ -2824,9 +3023,9 @@ class Graph extends Widget {
 			let arrowPoints = this.calculateArrow(originPos, targetPos, distance, 16);
 			ctx.beginPath();
 			ctx.fillStyle = "lightgrey";
-			ctx.moveTo(arrowPoints[0].x, arrowPoints[0].y);
-			ctx.lineTo(arrowPoints[1].x, arrowPoints[1].y);
-			ctx.lineTo(arrowPoints[2].x, arrowPoints[2].y);
+			ctx.moveTo(arrowPoints[0].x.get(), arrowPoints[0].y.get());
+			ctx.lineTo(arrowPoints[1].x.get(), arrowPoints[1].y.get());
+			ctx.lineTo(arrowPoints[2].x.get(), arrowPoints[2].y.get());
 			ctx.fill();
 		}
 
@@ -2925,14 +3124,14 @@ class Graph extends Widget {
 
 	calculateArrow(origin, target, distance, size) {
 
-		let ax = origin.x - target.x, ay = origin.y - target.y;
+		let ax = origin.x.get() - target.x.get(), ay = origin.y.get() - target.y.get();
 		let l = Math.sqrt(ax * ax + ay * ay);
 		ax /= l;
 		ay /= l; // Divide by the length to obtain the unitary vector
 		let bx = ay, by = -ax; // Simple 90 degree rotation 
 
-		let cx = target.x + (ax * distance);
-		let cy = target.y + (ay * distance);
+		let cx = target.x.get() + (ax * distance);
+		let cy = target.y.get() + (ay * distance);
 		let dx = cx + (ax * size);
 		let dy = cy + (ay * size);
 		let hz = size / 2; // The horizontal size of the arrow

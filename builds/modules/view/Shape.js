@@ -63,7 +63,7 @@ export class Shape {
 
 		ctx.translate(this._x, this.y);
 		if (position)
-			ctx.translate(position.x, position.y);
+			ctx.translate(position.x.get(), position.y.get());
 
 		// If there is a size, calculate the scale
 		if (size) {
@@ -96,7 +96,6 @@ export class Shape {
 		// Draw the text
 		if (this._text) {
 
-			// if (this._font) ctx.1
 			// Draw the path
 			ctx.fillStyle = this._color;
 			ctx.fillText(this._text, 0, 0);
@@ -105,7 +104,7 @@ export class Shape {
 		// Draw the subshapes
 		this._children.forEach(child => { child.draw(ctx); });
 
-		// Restor the previous state
+		// Restore the previous state
 		ctx.restore();
 	}
 }

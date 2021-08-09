@@ -1,4 +1,4 @@
-import { Vector } from "../../data/types/Vector.js";
+import { Vector } from "../../data/types/complex/Vector.js";
 import { Layer } from "../Layer.js";
 import { Element } from "../Element.js";
 import { Style } from "../../data/model/Style.js";

@@ -1,6 +1,6 @@
 import { Node } from "../Node";
 import { String } from "../types/String";
-import { Vector } from "../types/Vector";
+import { Vector } from "../types/complex/Vector";
 import { Ontology } from "./Ontology";
 
 /** Defines a Relation between two Class instances. */
@@ -48,7 +48,7 @@ export class Relation extends Node {
 	constructor(nodeName?: string, ontology?: Ontology, data?: any) {
 		
 		// Call the base class constructor
-		super(nodeName || "relation", ontology, data);
+		super("relation", nodeName, ontology, data);
 
 		// Initialize the child nodes
 		this._name = new String("name", this);
@@ -58,23 +58,6 @@ export class Relation extends Node {
 		this._midpoint = new Vector("midpoint", this);
 
 		// Deserialize the initialization data
-		if (data != undefined) this.deserialize(data);
+		if (data) this.deserialize(data);
 	}
-
-	// --------------------------------------------------------- PUBLIC METHODS
-
-	/** Deserializes the Relation instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data: any = {}, combine = true) {
-		if (data.name) this._name.deserialize(data.name);
-		else throw Error("Relation without name.");
-		if (data.description) this._description.deserialize(data.description);
-		if (data.origin) this._origin.deserialize(data.origin);
-		else throw Error("Relation without origin (" + data.name + ").");
-		if (data.target) this._target.deserialize(data.target);
-		else throw Error("Relation without target (" + data.name + ").");
-		if (data.midpoint) this._midpoint.deserialize(data.midpoint);
-	}
-
 }

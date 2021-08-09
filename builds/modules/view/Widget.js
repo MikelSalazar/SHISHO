@@ -80,7 +80,7 @@ export class Widget {
 		if (value)
 			this._children.forEach(c => { c._updated = true; });
 
-		// Otherwise, propagate "false" values updwards in the widget hierarchy
+		// Otherwise, propagate "false" values upwards in the widget hierarchy
 		else if (this._parent)
 			this._parent._updated = false;
 
@@ -93,7 +93,7 @@ export class Widget {
 
 	/** Updates the Widget.
 	 * @param deltaTime The time since the last call.
-	 * @param forced Indicates wheter to force the update or not. */
+	 * @param forced Indicates whether to force the update or not. */
 	update(deltaTime, forced = false) {
 
 		// Check if we have to force the update

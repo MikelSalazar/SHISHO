@@ -1,7 +1,8 @@
 import { Node } from "../Node.js";
-import { Color } from "../types/Color.js";
 import { String } from "../types/String.js";
-import { Measure } from "../types/Measure.js";
+import { Color } from "../types/complex/Color.js";
+import { Distance } from "../types/measures/Distance.js";
+import { Size } from "../types/measures/Size.js";
 
 /** Defines a visual Style. */
 export class Style extends Node {
@@ -15,32 +16,32 @@ export class Style extends Node {
 	constructor(nodeName, root, data) {
 
 		// Call the base class constructor
-		super(nodeName || "style", root, data);
+		super("style", nodeName, root, data);
 
 		// Initialize the child nodes
 		this._name = new String("name", this);
-		this._parent = new String("parent", this);
+		this._nodeParent = new String("parent", this);
 
 		this._shape = new String("shape", this);
-		this._width = new Measure("width", this);
-		this._height = new Measure("height", this);
-		this._radius = new Measure("radius", this);
-		this._radius2 = new Measure("radius2", this);
+		this._width = new Size("width", this);
+		this._height = new Size("height", this);
+		this._radius = new Size("radius", this);
+		this._radius2 = new Size("radius2", this);
 
 		this._color = new Color("color", this);
 		this._borderColor = new Color("border_color", this);
-		this._borderWidth = new Measure("border_width", this);
+		this._borderWidth = new Size("border_width", this);
 
 		this._textFont = new String("text_font", this);
-		this._textSize = new Measure("text_size", this);
+		this._textSize = new Size("text_size", this);
 		this._textAlign = new String("text_align", this);
 		this._textColor = new Color("text_color", this);
 
 		this._icon = new String("icon", this);
 		this._iconColor = new Color("icon_color", this);
-		this._iconSize = new Measure("icon_size", this);
-		this._iconOffsetX = new Measure("icon_offset_x", this);
-		this._iconOffsetY = new Measure("icon_offset_y", this);
+		this._iconSize = new Size("icon_size", this);
+		this._iconOffsetX = new Distance("icon_offset_x", this);
+		this._iconOffsetY = new Distance("icon_offset_y", this);
 
 		// Deserialize the initialization data
 		if (data != undefined)
@@ -109,60 +110,11 @@ export class Style extends Node {
 	get iconOffsetY() { return this._iconOffsetY; }
 
 
-	// --------------------------------------------------------- PUBLIC METHODS
-
-	/** Deserializes the Style instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data = {}, combine = true) {
-
-		// Deserialize the properties of the class
-		if (data.name != undefined)
-			this._name.deserialize(data.shape);
-		if (data.parent != undefined)
-			this._parent.deserialize(data.parent);
-		if (data.shape != undefined)
-			this._shape.deserialize(data.shape);
-		if (data.width != undefined)
-			this._width.deserialize(data.width);
-		if (data.height != undefined)
-			this._height.deserialize(data.height);
-		if (data.radius != undefined)
-			this._radius.deserialize(data.radius);
-		if (data.radius2 != undefined)
-			this._radius2.deserialize(data.radius2);
-		if (data.color != undefined)
-			this._color.deserialize(data.color);
-		if (data.border_color != undefined)
-			this._borderColor.deserialize(data.border_color);
-		if (data.border_width != undefined)
-			this._borderWidth.deserialize(data.border_width);
-		if (data.text_font != undefined)
-			this._textFont.deserialize(data.text_font);
-		if (data.text_size != undefined)
-			this._textSize.deserialize(data.text_size);
-		if (data.text_align != undefined)
-			this._textAlign.deserialize(data.text_align);
-		if (data.text_color != undefined)
-			this._textColor.deserialize(data.text_color);
-		if (data.icon != undefined)
-			this._icon.deserialize(data.icon);
-		if (data.icon_color != undefined)
-			this._iconColor.deserialize(data.icon_color);
-		if (data.icon_size != undefined)
-			this._iconSize.deserialize(data.icon_size);
-		if (data.icon_offset_x != undefined)
-			this._iconOffsetX.deserialize(data.icon_offset_x);
-		if (data.icon_offset_y != undefined)
-			this._iconOffsetY.deserialize(data.icon_offset_y);
-	}
-
-
 	/** Obtains the value of a property.
 	 * @param propertyName The name of the property. */
 	getValue(propertyName) {
 
-		let v = this[propertyName], p = this._parent;
+		let v = this[propertyName], p = this._nodeParent;
 		// if (v == null && p !== null) return p.parsePropertyValue(propertyName);
 		// if (v.endsWith())
 		// return this._color || (this._parent)? this._parent.color: null; 

@@ -59,22 +59,7 @@ export class Root extends Node {
 		this._styles = new NodeSet<Style>("styles", this, Style); 
 
 		// Deserialize the initialization data
-		if (data != undefined) this.deserialize(data);
+		if (data) this.deserialize(data);
 	}
 
-
-	// --------------------------------------------------------- PUBLIC METHODS
-
-	/** Deserializes the Root instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data: any = {}, combine = true) {
-
-		// Deserialize the properties of the class
-		if (data.name ) this._name.deserialize(data.name);
-		else throw Error ("Knowledge base without name.");
-		if (data.description) this._description.deserialize(data.description);
-		if (data.ontology) this._ontology.deserialize(data.ontology, combine);
-		if (data.styles) this.styles.deserialize(data.ontology, combine);
-	}
 }

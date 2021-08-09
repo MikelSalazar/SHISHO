@@ -4,32 +4,46 @@ export class Node {
 
 	// ------------------------------------------------------------ CONSTRUCTOR
 
-	/** Initializes a new Node instance.
-	 * @param name The name of the Node.
-	 * @param parent The parent Node.
-	 * @param data The initialization data. */
-	constructor(name, parent, data = null) {
+	/** Initializes a new instance of the Number class.
+	 * @param nodeType The type of the Node.
+	 * @param nodeName The name of the Node.
+	 * @param nodeParent The parent Node.
+	 * @param nodeData The initialization data. */
+	constructor(nodeType, nodeName, nodeParent, nodeData) {
+
+		// ---------------------------------------------------------- PUBLIC FIELDS
+
+		/** Marks the object as a Node. */
+		this.isNode = true;
 
 		// Initialize the data of the node
-		this._nodeName = name || "node";
-		this._nodeParent = parent;
+		this._nodeType = nodeType || "node";
+		this._nodeName = nodeName;
+		this._nodeParent = nodeParent;
 		this._nodeChildren = [];
-		this._nodeUpdated = false;
 
 		// Create a link between the node and its parent
-		if (parent)
-			parent._nodeChildren.push(this);
+		if (nodeParent)
+			nodeParent._nodeChildren.push(this);
+
+		// Send an update request upwards in the Node hierarchy
+		this._nodeUpdated = true;
+		this.nodeUpdated = false;
 	}
+
 
 	// ------------------------------------------------------ PUBLIC PROPERTIES
 
 	/** The name of the Node. */
 	get nodeName() { return this._nodeName; }
 
+	/** The type of the Node. */
+	get nodeType() { return this._nodeType; }
+
 	/** The parent Node. */
 	get nodeParent() { return this._nodeParent; }
 
-	/** The children Nodes. */
+	/** The child Nodes. */
 	get nodeChildren() { return this._nodeChildren; }
 
 	/** Indicates if the Node has been updated or not. */
@@ -42,9 +56,10 @@ export class Node {
 
 		// Propagate "true" values downwards in the node hierarchy
 		if (value)
-			this._nodeChildren.forEach(c => { c.nodeUpdated = true; });
+			for (let child in this._nodeChildren)
+				this._nodeChildren[child].nodeUpdated = false;
 
-		// Otherwise, propagate "false" values updwards in the node hierarchy
+		// Otherwise, propagate "false" values upwards in the node hierarchy
 		else if (this._nodeParent)
 			this._nodeParent.nodeUpdated = false;
 
@@ -55,31 +70,82 @@ export class Node {
 
 	// --------------------------------------------------------- PUBLIC METHODS
 
+	/** Updates the Node.
+	 * @param deltaTime The update time.
+	 * @param forced Indicates whether the update is forced or not. */
+	update(deltaTime = 0, forced = false) {
+
+		// If the update is not forced, skip it when the node is already updated
+		if (this._nodeUpdated && !forced)
+			return;
+
+		// Call the event function
+		if (Node.onPreUpdate)
+			Node.onPreUpdate(this);
+
+		// Update the children
+		for (let child of this._nodeChildren)
+			child.update(deltaTime, forced);
+
+		// Call the event function
+		if (Node.onPostUpdate)
+			Node.onPostUpdate(this);
+
+		// Mark this node as updated
+		this._nodeUpdated = true;
+	}
+
 
 	/** Serializes the Node instance.
+	 * @param mode The serialization mode.
 	 * @return The serialized data. */
-	serialize() {
+	serialize(mode) {
 
 		// Create an object to serialize the Node
-		let serializedObject = {};
+		let serializedData = {};
 
-		// Save the data of the children
-		let childIndex = 0, childCount = this._nodeChildren.length;
-		for (childIndex = 0; childIndex < childCount; childIndex++) {
-			let childNode = this._nodeChildren[childIndex];
-			serializedObject[childNode._nodeName] = childNode.serialize();
-		}
+		// Save the name of the node
+		// if (this.nodeName) serializedData.name = this.nodeName;
 
-		// Return the object with the serializated data
-		return serializedObject;
+		// Serialize the child nodes
+		for (let child of this._nodeChildren)
+			if (child.nodeName)
+				serializedData[child.nodeName] = child.serialize(mode);
+
+		// Return the object with the serialized data
+		return serializedData;
 	}
 
 
 	/** Deserializes the Node instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data = {}, combine = true) {
+	 * @param data The data to deserialize.
+	 * @param mode The deserialization mode. */
+	deserialize(data = {}, mode) {
+
+		// If the data is a string, check if it is JSON or CSV data
 		if (typeof data == "string")
-			return JSON.parse(data);
+			JSON.parse(data);
+
+		// If the data is an array, try to parse it value by value
+		if (Array.isArray(data)) {
+			for (let dataIndex = 0; dataIndex < data.length; dataIndex++) {
+				if (dataIndex >= this.nodeChildren.length)
+					return;
+				this.nodeChildren[dataIndex].deserialize(data[dataIndex], mode);
+			}
+		}
+
+		// If the data is an object, analyze it key by key
+		else
+			for (let dataKey in data) {
+				if (data[dataKey] == undefined)
+					continue;
+				for (let child of this._nodeChildren) {
+					if (child._nodeName == dataKey) {
+						child.deserialize(data[dataKey], mode);
+						break;
+					}
+				}
+			}
 	}
 }

@@ -1,9 +1,9 @@
 import { Node } from "../Node";
-import { Property } from "./Property";
-import { Vector } from "../types/Vector";
-import { String } from "../types/String";
-import { Ontology } from "./Ontology";
 import { NodeSet } from "../NodeSet";
+import { Property } from "./Property";
+import { String } from "../types/String";
+import { Vector } from "../types/complex/Vector";
+import { Ontology } from "./Ontology";
 
 /** Defines a Class of an Ontology. */
 export class Class extends Node {
@@ -46,7 +46,7 @@ export class Class extends Node {
 	constructor(nodeName?: string, ontology?: Ontology, data?: any) { 
 		
 		// Call the base class constructor
-		super(nodeName || "class", ontology, data);
+		super("class", nodeName, ontology, data);
 
 		// Initialize the child nodes
 		this._name = new String("name", this);
@@ -55,22 +55,6 @@ export class Class extends Node {
 		this._positions = new NodeSet<Vector>("positions", this, Vector);
 
 		// Deserialize the initialization data
-		if (data != undefined) this.deserialize(data);
-	}
-
-
-	// --------------------------------------------------------- PUBLIC METHODS
-
-	/** Deserializes the Class instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data: any = {}, combine = true) {
-
-		// Deserialize the properties of the class
-		if (data.name) this._name.deserialize(data.name);
-		else throw Error ("Class without name.");
-		if (data.description) this._description.deserialize(data.description);
-		if (data.properties) this._properties.deserialize(data.properties);
-		if (data.positions) this._positions.deserialize(data.positions);
+		if (data) this.deserialize(data);
 	}
 }

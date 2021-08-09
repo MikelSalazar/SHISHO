@@ -5,56 +5,56 @@ export class Number extends Node {
 
 	// --------------------------------------------------------- PRIVATE FIELDS
 
-	/** The value of the Number. */
-	private _value: number;
+	/** The current value of the Number.*/
+	private _value: number | undefined = undefined;
+
+	/** The default value of the Number. .*/
+	private _default: number | undefined = undefined;
 
 
-	// ------------------------------------------------------ PUBLIC PROPERTIES
+	// ------------------------------------------------------- PUBLIC ACCESSORS
 
-	/** The value of the Number. */
-	get value(): number { return this._value; }
-	set value(value: number) { 
-		// Ift he value is different, mark the node for update
-		if (this.value != value) this.nodeUpdated = false;
-
-		// Set the new value
-		this._value = value;
+	/** The current value of the Number.*/
+	get value(): number | undefined { return this._value; }
+	set value(v: number | undefined) {
+		if (this._value != v) this.nodeUpdated = false;
+		this._value = v;
 	}
 
+	/** Gets the default value of the Number. */
+	get default(): number | undefined { return this._default; }
+	set default(newDefault: number | undefined) { this._default = newDefault; }
 
-	// ------------------------------------------------------------ CONSTRUCTOR
+
+	// ----------------------------------------------------- PUBLIC CONSTRUCTOR
 
 	/** Initializes a new instance of the Number class.
 	 * @param nodeName The name of the Node.
 	 * @param nodeParent The parent Node.
-	 * @param data The initialization data. */
-	 constructor(nodeName?: string, nodeParent?: Node, data?: any) { 
-		
-		// Call the base class nada
-		super(nodeName || "string", nodeParent, data);
+	 * @param nodeData The initialization data. */
+	 constructor(nodeName?: string, nodeParent?: Node, nodeData?: any) {
 
-		// Initialize the value
-		this._value = undefined;
+		// Call the parent class constructor
+		super("number", nodeName, nodeParent, nodeData);
 
 		// Deserialize the initialization data
-		if (data != undefined) this.deserialize(data);
+		if (nodeData) this.deserialize(nodeData);
 	}
 
 
 	// --------------------------------------------------------- PUBLIC METHODS
-	
-	/** Serializes the instance.
+
+	/** Serializes the Number instance.
 	 * @return The serialized data. */
-	serialize(): any {  return this._value; }
+	serialize(): any { return this._value; }
 
 
-	/** Deserializes the instance.
-	 * @data The data to deserialize.
-	 * @combine Whether to combine with or to replace the previous data. */
-	deserialize(data: any, combine: boolean = true) { 
-		if (data == null) this.value = 0;
-		else if (typeof data == "number") this.value = data as number;
+	/** Deserializes the Number instance.
+	 * @param data The data to deserialize.
+	 * @param mode The deserialization mode. */
+	 deserialize(data: any, mode?: string) {
+		if (data == undefined) this.value = undefined;
+		else if (typeof data !== "number") this.value = parseFloat(data);
+		else this.value = data;
 	}
-
-
 }

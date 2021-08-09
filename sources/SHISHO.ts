@@ -1,6 +1,5 @@
 import { Root } from "./data/model/Root";
 import { Style } from "./data/model/Style";
-import { Vector } from "./data/types/Vector";
 import { Viewport } from "./view/Viewport";
 import { Dialog } from "./view/widgets/Dialog";
 
@@ -79,7 +78,7 @@ export class SHISHO {
 		// let style = new Style("test", null, {
 		// 	name: "test", shape: "circle",
 		// 	color: [0, 128, 255],
-		// 	radius: 128, iconColor: [255, 255, 255], iconSize: 160
+		// 	radius: 128, icon_color: [255, 255, 255], icon_size: 160
 		// });
 		// console.log(style.serialize());
 		// return;
@@ -110,6 +109,10 @@ export class SHISHO {
 
 			// Try to deserialize the given data
 			this.deserialize(params.data);
+
+			// //DEBUG
+			// console.log(this._data.serialize());
+			// return;
 		}
 		
 		
