@@ -6,7 +6,7 @@
   "scripts": {
     "run": "npm run dev",
     "test": "electron utilities/test/test",
-    "dev": "node utilities/build/build"
+    "dev": "node utilities/build/build.js"
   },
   "repository": {
     "type": "git",
@@ -35,9 +35,9 @@
     "url": "https://github.com/MikelSalazar/SHISHO/issues"
   },
   "homepage": "https://github.com/MikelSalazar/SHISHO#readme",
-  "devDependencies": {
-    "electron": "^13.0.1",
-    "terser": "^5.7.0",
-    "xml-js": "^1.6.11"
+  "dependencies": {
+    "g": "^2.0.1",
+    "ogl": "^0.0.97",
+    "ogl-typescript": "^0.1.40"
   }
 }

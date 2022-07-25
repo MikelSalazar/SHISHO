@@ -1,4 +1,5 @@
 .git
 .vscode
 private
+backup
 node_modules
